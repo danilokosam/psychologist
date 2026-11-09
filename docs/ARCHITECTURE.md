@@ -1,5 +1,14 @@
 # Architecture
 
+> **Implementation status (Milestone 0):** the monorepo, tooling, and a
+> thin end-to-end slice (Express `/health` + a Next.js page that calls it
+> over HTTP) are built and verified — see `docs/ROADMAP.md`. The
+> module-internal layering (Domain/Application/Infrastructure/Delivery)
+> described below is the agreed design for when real modules (patients,
+> appointments, ...) are added in later milestones; `apps/api` currently
+> has only operational routes (`routes/health.ts`), not yet any domain
+> module.
+
 ## Shape: modular monolith
 
 Organized internally by domain module (`organizations`, `patients`,
@@ -218,5 +227,6 @@ the same defense-in-depth principle as
 [ADR-0003](decisions/0003-defense-in-depth-tenant-isolation.md), applied
 one layer up.
 
-> This repository/monorepo scaffolding has not been created yet — it is
-> the first task of Milestone 0. See `docs/ROADMAP.md`.
+> This monorepo scaffolding is in place (pnpm workspaces, no Turborepo —
+> see `README.md` for commands). The `modules/` folder shape above is not
+> created yet; it lands with the first real domain module in Milestone 1.

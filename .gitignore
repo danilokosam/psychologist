@@ -9,3 +9,6 @@ coverage/
 *.log
 .DS_Store
 .vercel/
+packages/db/generated/
+*.tsbuildinfo
+next-env.d.ts

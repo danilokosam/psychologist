@@ -11,18 +11,43 @@ implies (explain before implementing, verify before marking complete).
 ## Milestones
 
 ### Milestone 0 — Foundations
-**Status: NOT STARTED (next up)**
+**Status: IN PROGRESS** — tooling/scaffolding done; Supabase/Prisma
+schema and auth wiring deliberately split out as the next unit of work
+(building `profiles`/`organizations`/`memberships` + RLS before
+Supabase Auth exists to populate them would have been exactly the kind
+of placeholder-for-future-functionality this milestone was scoped to
+avoid — see `CLAUDE.md` for the full note).
+
 Objective: a deployable skeleton with the security/tenancy model proven,
 not yet any real feature.
-- Monorepo scaffolding (`apps/web`, `apps/api`, `packages/db`, `packages/types`, `packages/config`).
-- Supabase project (EU region), `app_migrator` / `app_runtime` DB roles provisioned.
-- Prisma schema v1: `profiles`, `organizations`, `memberships` (+ composite unique constraints).
-- RLS enabled + forced on those tables; `withTenantContext` helper implemented.
-- Express skeleton: health check, JWT verification middleware.
-- Next.js skeleton: Supabase auth wiring, next-intl setup with `en.json`/`es.json` stubs.
-- Data inventory drafted (`docs/DATA-INVENTORY.md` — already done).
-- CI: lint, typecheck, test on push.
-- **DoD:** can sign up, create an org, see an empty dashboard, deployed to staging; startup assertion rejects a `BYPASSRLS` DB role.
+
+Done:
+- [x] Monorepo scaffolding (`apps/web`, `apps/api`, `packages/db`, `packages/types`, `packages/config`) — pnpm workspaces, no Turborepo.
+- [x] Shared strict TypeScript config + ESLint flat config (`packages/config`).
+- [x] `@psych/types` with one real shared schema (`HealthCheckResponse`), used by both apps.
+- [x] Express skeleton: `/health` endpoint, centralized error handling, Zod-validated env vars at startup.
+- [x] Next.js skeleton: next-intl wired (`en`/`es` catalogs, no URL prefixes per ADR-0007), a page that fetches `/health` from the API over HTTP and renders it.
+- [x] Prisma installed in `packages/db` (datasource/generator only, **zero models yet** — see note above).
+- [x] Data inventory drafted (`docs/DATA-INVENTORY.md`).
+- [x] CI: lint, typecheck, test, build on push (`.github/workflows/ci.yml`).
+- [x] `.env.example` files per app; no secrets committed.
+
+Done since (Milestone 0.5 — real Supabase infrastructure):
+- [x] Supabase project provisioned (EU region, `eu-central-1`), linked to this repo via the CLI (`supabase link`).
+- [x] `app_migrator` / `app_runtime` DB roles provisioned — confirmed `NOBYPASSRLS`, not superuser.
+- [x] Prisma schema v1: `profiles`, `organizations`, `memberships` (+ composite unique constraint on `memberships`), applied as real migrations.
+- [x] RLS enabled + forced on all three tables, with real policies (see `docs/SECURITY.md`) — verified via `supabase db advisors` (two real issues found and fixed: an unindexed FK, and duplicate permissive policies merged into one each).
+- [x] `profiles.id → auth.users.id` FK — applied via a separate privileged-connection path, not Prisma; see [ADR-0011](decisions/0011-profiles-auth-fk-via-privileged-connection.md).
+
+Not done (still pending before Milestone 1 features start):
+- [ ] `withTenantContext` helper implemented in `apps/api` (design exists in `docs/SECURITY.md`, no code yet — Prisma isn't a dependency of `apps/api` yet).
+- [ ] Supabase Auth wiring (frontend SDK + Express JWT verification middleware).
+- [ ] Startup assertion rejecting a `BYPASSRLS` DB role (application code, not yet written).
+- [ ] `app_runtime`'s pooled connection string assembled and wired anywhere.
+
+**DoD (not yet met):** can sign up, create an org, see an empty
+dashboard, deployed to staging; startup assertion rejects a `BYPASSRLS`
+DB role.
 
 ### Milestone 1 — Organizations & Membership + RBAC
 **Status: NOT STARTED**

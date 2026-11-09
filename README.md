@@ -5,9 +5,11 @@ psychology practices manage patients, appointments, clinical sessions,
 clinical notes, and payments in one place, instead of spreadsheets,
 calendars, and messaging apps.
 
-> **Project status:** pre-implementation. Documentation and architecture
-> foundations are in place; application code has not been written yet.
-> See [`docs/ROADMAP.md`](docs/ROADMAP.md) for current milestone status.
+> **Project status:** Milestone 0 (project foundation) implemented —
+> monorepo, tooling, a working Express health check, and a Next.js app
+> that calls it over HTTP. No business features (auth, patients,
+> appointments, clinical data, payments) exist yet. See
+> [`docs/ROADMAP.md`](docs/ROADMAP.md) for current milestone status.
 
 ## Who this is for
 
@@ -43,11 +45,68 @@ and [`docs/decisions/`](docs/decisions/) (ADRs).
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Milestones and progress |
 | [`docs/decisions/`](docs/decisions/) | Architecture Decision Records (ADRs) |
 
-## Setup instructions
+## Project structure
 
-Not yet available — repository/monorepo scaffolding happens in Milestone 0.
-This section will be filled in with real install/run/test commands once
-that scaffolding exists. See [`docs/ROADMAP.md`](docs/ROADMAP.md).
+```
+apps/
+  web/            Next.js frontend (App Router, Tailwind, next-intl)
+  api/             Express backend (TypeScript, REST)
+packages/
+  types/          Shared Zod schemas -- the only thing web and api both import
+  config/         Shared tsconfig base + ESLint config
+  db/             Prisma (schema only for now -- see note below)
+```
+`apps/web` never imports `packages/db` or talks to Postgres directly — it
+only calls `apps/api` over HTTP. See
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full module-internal
+structure that `apps/api` will follow once features are added.
+
+> **`packages/db` is deliberately schema-less right now.** The real schema
+> (`profiles`/`organizations`/`memberships` + RLS, see `docs/DATABASE.md`)
+> is tightly coupled to Supabase Auth, which Milestone 0 explicitly excluded
+> to avoid building tables nothing can populate yet. Prisma is installed and
+> proven to work (`pnpm --filter @psych/db run generate`); the schema itself
+> is the next unit of work.
+
+## Prerequisites
+
+- Node.js ≥ 20.9 (`.nvmrc` pins `22`)
+- [pnpm](https://pnpm.io) `11.20.0` (the repo's `packageManager` field pins
+  this; `corepack use pnpm@11.20.0` will install it if you don't have it)
+
+## Setup
+
+```bash
+pnpm install
+```
+
+Each app reads its own environment file — copy the example and fill in
+real values as they become needed:
+
+```bash
+cp apps/api/.env.example apps/api/.env
+cp apps/web/.env.example apps/web/.env.local   # Next.js convention: .env.local for local overrides
+```
+
+Milestone 0 only needs `PORT`/`NODE_ENV` (API) and `NEXT_PUBLIC_API_URL`
+(web) — the example files' defaults already work together out of the box.
+
+## Development commands
+
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Runs both apps in parallel (API on `:4000`, web on `:3000`) |
+| `pnpm --filter @psych/api run dev` | Runs only the API (via `tsx watch`) |
+| `pnpm --filter @psych/web run dev` | Runs only the frontend |
+| `pnpm build` | Builds the shared types package, then both apps |
+| `pnpm lint` | Lints every package |
+| `pnpm typecheck` | Type-checks every package (builds `@psych/types` first) |
+| `pnpm test` | Runs tests in every package |
+
+With both apps running, `http://localhost:3000` renders a page that
+fetches `http://localhost:4000/health` client-side and displays the
+result — the concrete proof that the frontend talks to the backend only
+over HTTP, validated against the shared `@psych/types` schema on both ends.
 
 ## Development data policy
 

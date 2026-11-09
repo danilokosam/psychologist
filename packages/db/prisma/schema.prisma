@@ -1,0 +1,86 @@
+// Schema v1: profiles, organizations, memberships -- the identity/tenancy
+// foundation every future feature depends on. See docs/DATABASE.md for the
+// full design rationale and docs/decisions/ for the ADRs this implements.
+//
+// Deliberately scoped to the `public` schema only. `profiles.id` carries a
+// real foreign key into Supabase's `auth.users` table, but that FK is added
+// as a manual SQL statement appended to the generated migration (see
+// migration.sql) rather than declaring `auth.users` as a Prisma model.
+// Letting Prisma manage a model in `auth` would make `prisma migrate dev`'s
+// shadow-database diffing try to create/compare a table it doesn't actually
+// own -- Supabase's real `auth.users` has a different structure than an
+// empty shadow DB would have. Keeping Prisma scoped to `public` avoids that
+// entirely while still getting a real, DB-enforced FK constraint.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrganizationType {
+  individual
+  clinic
+}
+
+enum MembershipRole {
+  owner
+  psychologist
+  admin_staff
+}
+
+enum MembershipStatus {
+  active
+  invited
+  suspended
+}
+
+// 1:1 shadow of Supabase's auth.users (see note above re: the FK).
+model Profile {
+  id        String   @id @db.Uuid
+  fullName  String?  @map("full_name")
+  phone     String?
+  locale    String   @default("en")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  memberships Membership[]
+
+  @@map("profiles")
+}
+
+model Organization {
+  id               String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String
+  slug             String           @unique
+  type             OrganizationType @default(individual)
+  subscriptionTier String?          @map("subscription_tier")
+  settings         Json             @default("{}")
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  deletedAt        DateTime?        @map("deleted_at") @db.Timestamptz
+
+  memberships Membership[]
+
+  @@map("organizations")
+}
+
+model Membership {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  userId         String           @map("user_id") @db.Uuid
+  role           MembershipRole   @default(psychologist)
+  status         MembershipStatus @default(active)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  profile      Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // ADR-0004: this is the compound unique index every future composite FK
+  // referencing "a user acting within an org" (professional_id, author_id,
+  // ...) will target -- column order matches docs/DATABASE.md exactly.
+  @@unique([organizationId, userId])
+  @@map("memberships")
+}

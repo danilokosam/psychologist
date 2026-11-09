@@ -150,6 +150,15 @@ erDiagram
   clinical_sessions ||--o{ payments : "billed via"
 ```
 
-> Schema has not been implemented in Prisma yet — this document is the
-> design that Milestone 0's initial `schema.prisma` must match. Update
-> this file in the same change as any schema migration.
+> **`profiles`, `organizations`, and `memberships` are implemented** on
+> the real Supabase project (`packages/db/prisma/migrations/`) — exactly
+> as designed above, with one deviation: the `profiles.id → auth.users.id`
+> foreign key is NOT part of the Prisma schema/migration (Supabase blocks
+> granting custom roles any privilege on its `auth` schema); it's applied
+> once via a separate privileged-connection script,
+> `packages/db/sql/profiles-auth-fk.sql` — see
+> [ADR-0011](decisions/0011-profiles-auth-fk-via-privileged-connection.md).
+> `patients`, `appointments`, `clinical_sessions`, `clinical_notes`,
+> `clinical_note_versions`, `payments`, `subscriptions`, and `audit_logs`
+> are still only this design, not yet implemented. Update this file in
+> the same change as any schema migration.

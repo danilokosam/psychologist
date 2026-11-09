@@ -1,0 +1,15 @@
+{
+  "extends": "../../packages/config/tsconfig.base.json",
+  "compilerOptions": {
+    // Overrides the shared base's ESNext/Bundler module settings: this
+    // app is run directly with plain `node dist/server.js` in production
+    // (no bundler), which needs CommonJS output and Node-style extension-
+    // less relative imports to resolve correctly.
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["node"]
+  },
+  "include": ["src"]
+}

@@ -19,6 +19,7 @@ Status is one of `Proposed`, `Accepted`, `Superseded`, `Deprecated`.
 | [0008](0008-supabase-auth-independent-verification.md) | Supabase Auth with independent JWT verification in Express; non-bypassing runtime DB role | Accepted |
 | [0009](0009-module-internal-ports-and-adapters.md) | Lightweight Ports-and-Adapters within each module; composition root uses request-scoped factory functions | Accepted |
 | [0010](0010-role-permission-matrix.md) | Role permission matrix for clinical and administrative resources | Accepted |
+| [0011](0011-profiles-auth-fk-via-privileged-connection.md) | `profiles` → `auth.users` FK applied via the privileged admin connection, not Prisma | Accepted |
 
 When a decision here needs to change, add a new ADR that supersedes the old
 one and update its status — don't silently edit history.

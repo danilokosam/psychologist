@@ -118,7 +118,72 @@ code is a realistic failure mode. RLS is the independent second layer
 that fails safe when that happens. See
 [ADR-0003](decisions/0003-defense-in-depth-tenant-isolation.md).
 
-### Organization scoping
+### Identity & tenancy foundation — implemented
+
+`profiles`, `organizations`, and `memberships` exist on the real Supabase
+project and are RLS-enabled (and forced) with the policies below —
+applied via `app_migrator`/Prisma Migrate, **except** the
+`profiles.id → auth.users.id` foreign key, which required a different
+path; see [ADR-0011](decisions/0011-profiles-auth-fk-via-privileged-connection.md).
+Two policies per table were deliberately merged into one with `OR`
+instead of being kept as separate permissive policies — `supabase db
+advisors` flags multiple permissive policies on the same table/action as
+a real performance cost (each one is evaluated per query), not just a
+style nitpick. Every `current_setting(...)` call is wrapped in
+`(select ...)` so Postgres evaluates it once per query (an InitPlan)
+rather than once per row:
+
+```sql
+-- profiles: see your own row, or any row belonging to someone who shares
+-- an active organization with you (needed to display teammate names).
+CREATE POLICY "profiles_select" ON "profiles"
+  FOR SELECT
+  USING (
+    id = (select current_setting('app.current_user_id', true)::uuid)
+    OR EXISTS (
+      SELECT 1 FROM memberships m1
+      JOIN memberships m2 ON m1.organization_id = m2.organization_id
+      WHERE m1.user_id = profiles.id
+        AND m2.user_id = (select current_setting('app.current_user_id', true)::uuid)
+        AND m1.status = 'active' AND m2.status = 'active'
+    )
+  );
+-- insert/update: only on your own row (WITH CHECK, not just USING).
+-- No DELETE policy -- profiles can't be deleted through the application.
+
+-- organizations: visible to any active member; editable only by 'owner'.
+CREATE POLICY "organizations_member_select" ON "organizations"
+  FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM memberships m
+    WHERE m.organization_id = organizations.id
+      AND m.user_id = (select current_setting('app.current_user_id', true)::uuid)
+      AND m.status = 'active'
+  ));
+-- insert: WITH CHECK (true) -- identity was already verified one layer up
+-- (JWT verification), before the request ever reaches the database.
+
+-- memberships: your own memberships (any org -- needed for the org
+-- switcher, before any org is "active" yet), OR anyone in your active org.
+CREATE POLICY "memberships_select" ON "memberships"
+  FOR SELECT
+  USING (
+    user_id = (select current_setting('app.current_user_id', true)::uuid)
+    OR organization_id = (select current_setting('app.current_org_id', true)::uuid)
+  );
+```
+
+Full migration history: `packages/db/prisma/migrations/`. The `auth_rls_initplan`
+advisor still flags these policies even with the `(select ...)` wrapping applied
+correctly (confirmed by inspecting the stored policy expression via `pg_policy`) —
+this appears to be a linter pattern-matching limitation specific to
+`current_setting()` rather than `auth.<function>()`, not an actual unresolved
+performance issue; not chased further.
+
+### Organization scoping — planned, not yet implemented
+
+The pattern below is the design for `patients` and other tenant tables
+once they exist (Milestone 2+) — not yet applied to any real table.
 
 ```sql
 ALTER TABLE patients ENABLE ROW LEVEL SECURITY;
@@ -126,14 +191,14 @@ ALTER TABLE patients FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation ON patients
   FOR ALL
-  USING (organization_id = current_setting('app.current_org_id', true)::uuid)
-  WITH CHECK (organization_id = current_setting('app.current_org_id', true)::uuid);
+  USING (organization_id = (select current_setting('app.current_org_id', true)::uuid))
+  WITH CHECK (organization_id = (select current_setting('app.current_org_id', true)::uuid));
 ```
 `WITH CHECK` is required separately from `USING` — without it, nothing
 stops an `UPDATE` from moving a row into a different organization.
 Applied to every tenant table (`FOR ALL` covers SELECT/INSERT/UPDATE/DELETE).
 
-### Role-aware policies on clinical data
+### Role-aware policies on clinical data — planned, not yet implemented
 
 Administrative staff must not read or write clinical notes **even if the
 application-level role check is accidentally missed**, and even a
@@ -235,8 +300,10 @@ CREATE POLICY clinical_sessions_write ON clinical_sessions
 
 ### Runtime database role — cannot bypass RLS
 
-RLS is silently skipped for a table's owner and always for superusers.
-The concrete setup that prevents this:
+**Implemented** on the real project: `app_migrator` and `app_runtime`
+both exist, confirmed `rolbypassrls = false` and `rolsuper = false` for
+both. RLS is silently skipped for a table's owner and always for
+superusers; the concrete setup that prevents this:
 
 ```sql
 CREATE ROLE app_migrator LOGIN PASSWORD '...';            -- owns tables; CI/deploy only, never the app
@@ -251,7 +318,13 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_runti
 Express API's `DATABASE_URL`** — it is provisioned with RLS-bypass
 privileges by Supabase, by design, for admin tooling. The application
 should assert this at startup: fail loudly if the connected role has
-`rolbypassrls = true`.
+`rolbypassrls = true`. **Not yet implemented** — this assertion is
+application code in `apps/api`, which doesn't connect to the database at
+all yet (see `CLAUDE.md` current status). `app_runtime`'s password is
+generated and the role exists, but its pooled (transaction-mode, port
+6543) connection string hasn't been assembled or wired into any app code
+yet — that's part of the still-pending Supabase Auth / `withTenantContext`
+integration work.
 
 ## Private file storage
 

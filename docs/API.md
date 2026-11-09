@@ -1,6 +1,7 @@
 # API
 
-No endpoints are implemented yet. This document defines the conventions
+One operational endpoint (`/health`) is implemented; no business
+endpoints yet. This document defines the conventions
 every endpoint must follow; the endpoint table below is filled in
 incrementally, one feature at a time, as each is actually built and
 verified — never documented ahead of a working, tested implementation.
@@ -28,9 +29,11 @@ verified — never documented ahead of a working, tested implementation.
 
 ## Endpoints
 
-| Method | Path | Purpose | Status |
-|---|---|---|---|
-| — | — | *(none implemented yet — filled in per feature, see `docs/FEATURES.md`)* | — |
+| Method | Path | Purpose | Auth required | Status |
+|---|---|---|---|---|
+| GET | `/health` | Operational liveness check — not a domain endpoint, no auth | No | Implemented (Milestone 0) |
+
+Everything else is *(none implemented yet — filled in per feature, see `docs/FEATURES.md`)*.
 
 > Update this table as part of finishing a feature, not before — an
 > endpoint only belongs here once it is implemented and tested.

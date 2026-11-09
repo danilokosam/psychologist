@@ -63,15 +63,35 @@ Full feature-by-feature detail and current status: **`docs/FEATURES.md`**.
 ## Repository structure
 
 ```
-/apps/web      Next.js frontend
-/apps/api      Express backend
-/packages/db   Prisma schema, migrations
+/apps/web      Next.js frontend (App Router, Tailwind, next-intl)
+/apps/api      Express backend -- src/{app.ts,server.ts,env.ts,middleware/,routes/}
+/packages/db   Prisma -- schema only so far, no models yet (see note below)
 /packages/types  Shared Zod schemas (frontend + backend contracts)
 /packages/config shared eslint/tsconfig
 /docs          this documentation set
 ```
 `/web` never imports `/db` directly — only talks to `/api` over HTTP.
-**Not yet scaffolded** — this is Milestone 0's first task.
+**Scaffolded in Milestone 0** (pnpm workspaces, no Turborepo — two apps and
+two consumable packages don't need build orchestration beyond `pnpm -r`).
+Run `pnpm install` at the repo root, then see `README.md` for commands.
+
+Two tsconfig/build details worth knowing before touching `apps/api` or
+`packages/types`: both override the shared base's `module: ESNext` /
+`moduleResolution: Bundler` to `CommonJS` / `Node`, because `apps/api` runs
+its build output directly with plain `node dist/server.js` (no bundler) —
+ESNext output with extension-less relative imports fails Node's native ESM
+loader. `apps/web` keeps the shared base as-is; Next's own bundler doesn't
+care about this setting.
+
+`packages/db` now has a real schema (`profiles`/`organizations`/
+`memberships`) applied to the real Supabase project via
+`prisma/migrations/`. `packages/db/sql/` is a separate, deliberately
+small category of hand-run SQL for anything Prisma/`app_migrator`
+structurally cannot do (currently: the one `auth.users` FK) — see
+[ADR-0011](docs/decisions/0011-profiles-auth-fk-via-privileged-connection.md).
+Don't fold `sql/` scripts into Prisma migrations; don't re-attempt
+granting a custom role access to `auth` — it's a platform restriction,
+not a privilege you're missing.
 
 ## Database design principles (full detail: `docs/DATABASE.md`)
 
@@ -203,13 +223,28 @@ tests, Playwright for a small number of critical E2E flows.
 
 ## Current milestone and status
 
-**Milestone 0 (Foundations) — not yet started.** Documentation and
-architecture foundations (this file, `/docs`) are complete. Next step:
-monorepo scaffolding, Supabase project setup, initial Prisma schema +
-RLS, Express/Next.js skeletons. Full milestone breakdown and DoD per
-milestone: `docs/ROADMAP.md`. **Work proceeds feature by feature, within
-one milestone at a time — do not jump ahead to a later milestone's
-features.**
+**Milestone 0 (Foundations) + Milestone 0.5 (real Supabase infra) done;
+Supabase Auth wiring and `withTenantContext` code are next.** What
+exists: pnpm monorepo, shared TS/ESLint config, `@psych/types`,
+`@psych/api` (Express, `/health`, env validation, error handling, one
+passing test — **no Prisma/DB dependency yet**), `@psych/web` (Next.js,
+next-intl wired en/es, a page that fetches `/health` over HTTP), GitHub
+Actions CI. **Real Supabase project** ("psychologist", `eu-central-1`,
+linked via `supabase link`) with `app_migrator`/`app_runtime` roles
+(confirmed `NOBYPASSRLS`) and the actual `profiles`/`organizations`/
+`memberships` schema applied as Prisma migrations, RLS enabled+forced
+with real policies (`docs/SECURITY.md`), verified clean against
+`supabase db advisors`. One platform constraint discovered and now
+documented: custom roles cannot be granted any privilege on Supabase's
+`auth` schema, confirmed empirically — see
+[ADR-0011](docs/decisions/0011-profiles-auth-fk-via-privileged-connection.md)
+before attempting anything that touches `auth`/`storage`/`realtime`
+schemas. What's explicitly *not* done yet: `withTenantContext` (no
+Prisma dependency in `apps/api` yet), Supabase Auth wiring (frontend SDK
++ Express JWT verification), the `BYPASSRLS` startup assertion, and all
+business features. Full detail: `docs/ROADMAP.md`. **Work proceeds
+feature by feature, within one milestone at a time — do not jump ahead
+to a later milestone's features.**
 
 ## Locked architectural decisions — do not change without discussion first
 
@@ -223,7 +258,8 @@ features.**
 8. Supabase Auth with independent JWT verification; `app_runtime` DB role can never bypass RLS.
 9. Lightweight Ports-and-Adapters within each module; composition root uses request-scoped factory functions, never a direct adapter import in controllers.
 10. The role permission matrix in `docs/SECURITY.md` — in particular, `admin_staff` never accesses clinical notes, and clinical note edits are author-restricted even among psychologists.
-11. **No real patient data before the Milestone 6 legal/DPO review is complete**, and no part of this system should be described as making the product "GDPR-compliant" outright.
+11. Any schema change touching Supabase's `auth` (or `storage`/`realtime`) schema goes through a privileged-connection script in `packages/db/sql/`, never a Prisma migration — custom roles cannot be granted access to those schemas. See [ADR-0011](docs/decisions/0011-profiles-auth-fk-via-privileged-connection.md).
+12. **No real patient data before the Milestone 6 legal/DPO review is complete**, and no part of this system should be described as making the product "GDPR-compliant" outright.
 
 Full rationale and alternatives considered for each: `docs/decisions/`.
 

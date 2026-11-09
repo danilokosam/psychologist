@@ -1,0 +1,10 @@
+{
+  "home": {
+    "title": "Gestión de Consulta de Psicología",
+    "subtitle": "Hito 0 — fundación del proyecto",
+    "apiStatusLabel": "Estado de la API",
+    "apiStatusChecking": "Comprobando...",
+    "apiStatusOk": "Conectado (última comprobación: {timestamp})",
+    "apiStatusError": "No se puede contactar con la API"
+  }
+}

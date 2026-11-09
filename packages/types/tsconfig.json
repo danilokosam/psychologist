@@ -1,0 +1,14 @@
+{
+  "extends": "../config/tsconfig.base.json",
+  "compilerOptions": {
+    // Overrides the shared base's ESNext/Bundler module settings:
+    // this package is consumed by apps/api's plain `node dist/server.js`
+    // (no bundler), which needs CommonJS output to run directly.
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "outDir": "dist",
+    "declaration": true,
+    "rootDir": "src"
+  },
+  "include": ["src"]
+}

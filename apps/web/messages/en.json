@@ -1,0 +1,10 @@
+{
+  "home": {
+    "title": "Psychology Practice Management",
+    "subtitle": "Milestone 0 — project foundation",
+    "apiStatusLabel": "API status",
+    "apiStatusChecking": "Checking...",
+    "apiStatusOk": "Connected (last check: {timestamp})",
+    "apiStatusError": "Unable to reach the API"
+  }
+}
