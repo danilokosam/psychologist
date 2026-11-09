@@ -47,7 +47,8 @@ model Profile {
   locale    String   @default("en")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  memberships Membership[]
+  memberships          Membership[]
+  createdOrganizations Organization[]
 
   @@map("profiles")
 }
@@ -59,9 +60,15 @@ model Organization {
   type             OrganizationType @default(individual)
   subscriptionTier String?          @map("subscription_tier")
   settings         Json             @default("{}")
+  // Who created this organization. Required for auditability, and load-bearing
+  // for RLS: it's what lets the creator see their own organization during the
+  // single transaction that bootstraps it, before any membership row exists.
+  // See docs/SECURITY.md.
+  createdBy        String           @map("created_by") @db.Uuid
   createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz
   deletedAt        DateTime?        @map("deleted_at") @db.Timestamptz
 
+  creator     Profile      @relation(fields: [createdBy], references: [id])
   memberships Membership[]
 
   @@map("organizations")

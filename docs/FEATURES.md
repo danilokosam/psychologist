@@ -21,16 +21,30 @@ with a richer version deferred to Extended MVP — noted per feature.
 ---
 
 ### F-001 — User Registration & Login
-**Milestone:** 0 · **Status:** NOT STARTED
+**Milestone:** 0 · **Status:** COMPLETED · **Scope tier:** Core MVP
 - **Purpose:** Let a psychologist create an account and sign in.
 - **Acceptance criteria:** Sign up with email/password creates a Supabase
   Auth user and a matching `profiles` row; login issues a session the
   frontend can use; invalid credentials are rejected with a clear error.
-- **Modules/files:** TBD during implementation.
-- **Key decisions:** [ADR-0008](decisions/0008-supabase-auth-independent-verification.md).
-- **Security considerations:** JWT verification in Express, not trust of
-  frontend-reported identity.
-- **Required tests:** valid signup/login; invalid/expired/tampered JWT rejected.
+  **All verified** against the real project (see `docs/ROADMAP.md`
+  Milestone 0 DoD). The `profiles` row is created by `POST /auth/bootstrap`
+  rather than a trigger on `auth.users`, because custom roles cannot touch
+  that schema ([ADR-0011](decisions/0011-profiles-auth-fk-via-privileged-connection.md)).
+- **Modules/files:** `apps/api/src/shared/middleware/require-auth.ts`,
+  `apps/web/src/components/login-form.tsx`,
+  `apps/web/src/lib/supabase/*`, `apps/web/src/proxy.ts`.
+- **Key decisions:** [ADR-0008](decisions/0008-supabase-auth-independent-verification.md)
+  — the project uses asymmetric (ES256) signing keys, so the API verifies
+  against the JWKS endpoint and holds no signing secret.
+- **Security considerations:** JWT verified in Express against JWKS with the
+  issuer pinned; identity never taken from a header, body or query. All
+  verification failures return an identical 401.
+- **Tests:** 5 automated tests cover rejection of missing/non-bearer/empty/
+  malformed tokens and that failures are indistinguishable
+  (`require-auth.test.ts`). **Caveat:** the happy path (real sign-up →
+  real token → API) is verified by a documented manual procedure, not by
+  CI, because it needs live Supabase credentials. Worth revisiting if we
+  add a CI test project.
 
 ### F-002 — Password Recovery
 **Milestone:** 0 · **Status:** NOT STARTED
@@ -42,7 +56,14 @@ with a richer version deferred to Extended MVP — noted per feature.
 - **Required tests:** reset flow end to end; expired token rejected.
 
 ### F-003 — Organization Creation & Membership
-**Milestone:** 0–1 · **Status:** NOT STARTED · **Scope tier:** Core MVP (solo-practice shape only)
+**Milestone:** 0–1 · **Status:** IN PROGRESS · **Scope tier:** Core MVP (solo-practice shape only)
+- **Done:** signing up auto-creates an organization with the creator as
+  `owner`, idempotently (`POST /auth/bootstrap`, `modules/accounts/`). The
+  data model and `X-Organization-Id` already support belonging to several
+  organizations.
+- **Remaining:** no UI to switch the active organization, and no tests for
+  multi-org membership or duplicate-membership rejection. Those finish this
+  feature in Milestone 1.
 - **Purpose:** Create an organization and manage who belongs to it.
 - **Acceptance criteria (Core MVP):** Signing up auto-creates an
   organization with the creator as `owner`; a user can belong to
@@ -56,7 +77,12 @@ with a richer version deferred to Extended MVP — noted per feature.
 - **Required tests:** multi-org membership; duplicate-membership rejected.
 
 ### F-004 — Role-Based Access Control Middleware
-**Milestone:** 1 · **Status:** NOT STARTED · **Scope tier:** Core MVP (mechanism); exercised with all three roles starting in Extended MVP
+**Milestone:** 1 · **Status:** IN PROGRESS · **Scope tier:** Core MVP (mechanism); exercised with all three roles starting in Extended MVP
+- **Done:** `resolveOrganization` verifies an active membership for the
+  requested organization and attaches the caller's role to the request
+  (404, never 403, on a non-membership).
+- **Remaining:** `requireRole(...)` route gating per the permission matrix,
+  and the role × route test matrix.
 - **Purpose:** Uniformly enforce the role permission matrix on every route.
 - **Acceptance criteria:** A route declares its required role(s) per
   the permission matrix in `docs/SECURITY.md`

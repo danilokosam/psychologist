@@ -20,6 +20,7 @@ Status is one of `Proposed`, `Accepted`, `Superseded`, `Deprecated`.
 | [0009](0009-module-internal-ports-and-adapters.md) | Lightweight Ports-and-Adapters within each module; composition root uses request-scoped factory functions | Accepted |
 | [0010](0010-role-permission-matrix.md) | Role permission matrix for clinical and administrative resources | Accepted |
 | [0011](0011-profiles-auth-fk-via-privileged-connection.md) | `profiles` → `auth.users` FK applied via the privileged admin connection, not Prisma | Accepted |
+| [0012](0012-rls-gates-on-verified-membership.md) | Tenant policies gate on verified membership, via private SECURITY DEFINER helpers | Accepted |
 
 When a decision here needs to change, add a new ADR that supersedes the old
 one and update its status — don't silently edit history.

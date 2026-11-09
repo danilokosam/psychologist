@@ -5,6 +5,30 @@
     "apiStatusLabel": "API status",
     "apiStatusChecking": "Checking...",
     "apiStatusOk": "Connected (last check: {timestamp})",
-    "apiStatusError": "Unable to reach the API"
+    "apiStatusError": "Unable to reach the API",
+    "signIn": "Sign in"
+  },
+  "auth": {
+    "title": "Sign in",
+    "subtitle": "Access your practice.",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Sign in",
+    "signUp": "Create account",
+    "pending": "Please wait...",
+    "switchToSignUp": "Don't have an account? Create one",
+    "switchToSignIn": "Already have an account? Sign in",
+    "checkYourEmail": "Check your email to confirm your account."
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "emptyState": "Nothing to show yet — patients, appointments and sessions arrive in later milestones.",
+    "defaultPracticeName": "My practice",
+    "loading": "Loading your account...",
+    "loadFailed": "Could not load your account: {message}",
+    "signedInAs": "Signed in as",
+    "practice": "Practice",
+    "role": "Role",
+    "signOut": "Sign out"
   }
 }

@@ -16,3 +16,6 @@ allowBuilds:
   prisma: true
   sharp: false
   unrs-resolver: false
+
+minimumReleaseAgeExclude:
+  - jose@6.2.17

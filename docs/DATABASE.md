@@ -30,7 +30,19 @@ Shadow of Supabase's `auth.users`, 1:1.
 `subscription_tier`, `settings jsonb` (org-level defaults: timezone,
 currency, default locale — kept in `jsonb` rather than dedicated columns
 to stay lean until a concrete need for querying on them appears),
+`created_by uuid NOT NULL → profiles(id) ON DELETE RESTRICT` (indexed),
 `created_at`, `deleted_at` (soft delete).
+
+`created_by` is not only an audit column — it is load-bearing for RLS.
+Postgres applies SELECT policies to rows returned by `INSERT ... RETURNING`
+(which is what Prisma's `create()` issues), and during bootstrap the
+organization is inserted before its first membership can reference it, so a
+membership-based policy alone would reject the insert. Attributing the row
+to its creator breaks that cycle without weakening isolation. `RESTRICT`
+(not `CASCADE`) is deliberate: a user who created an organization cannot be
+hard-deleted out from under it, which matches the retention/erasure stance
+in `docs/DATA-INVENTORY.md` — account deletion will need an explicit
+ownership-transfer or org-deletion flow rather than a silent cascade.
 
 ### `memberships`
 `id PK`, `organization_id FK → organizations`, `user_id FK → profiles`,

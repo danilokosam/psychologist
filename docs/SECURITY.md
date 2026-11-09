@@ -180,10 +180,26 @@ this appears to be a linter pattern-matching limitation specific to
 `current_setting()` rather than `auth.<function>()`, not an actual unresolved
 performance issue; not chased further.
 
+### Identity helpers — read this before writing any policy
+
+Policies never cast `current_setting(...)` inline. They go through three
+functions in the private `app_private` schema
+(`packages/db/sql/rls-helpers.sql`), for reasons that were each found by
+running code, not by review — see
+[ADR-0012](decisions/0012-rls-gates-on-verified-membership.md):
+
+| Function | Purpose |
+|---|---|
+| `app_private.current_user_id()` | Verified caller id. Wraps `nullif(..., '')` — a reused pooled connection reports an emptied GUC as `''`, and `''::uuid` raises 22P02 |
+| `app_private.current_org_id()` | The organization the application *declared* (from `X-Organization-Id`) |
+| `app_private.is_active_member(org_id)` | Whether the caller is *actually* an active member — `SECURITY DEFINER`, because a policy cannot query its own table without Postgres rejecting the plan as recursive (42P17) |
+| `app_private.is_organization_creator(org_id)` | Same, for the bootstrap case |
+
 ### Organization scoping — planned, not yet implemented
 
 The pattern below is the design for `patients` and other tenant tables
-once they exist (Milestone 2+) — not yet applied to any real table.
+once they exist (Milestone 2+) — not yet applied to any real table. Note
+it carries **both** conditions:
 
 ```sql
 ALTER TABLE patients ENABLE ROW LEVEL SECURITY;
@@ -191,9 +207,22 @@ ALTER TABLE patients FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_isolation ON patients
   FOR ALL
-  USING (organization_id = (select current_setting('app.current_org_id', true)::uuid))
-  WITH CHECK (organization_id = (select current_setting('app.current_org_id', true)::uuid));
+  USING (
+    organization_id = (select app_private.current_org_id())
+    AND app_private.is_active_member(organization_id)
+  )
+  WITH CHECK (
+    organization_id = (select app_private.current_org_id())
+    AND app_private.is_active_member(organization_id)
+  );
 ```
+
+The first condition stops the application from reading an organization it
+didn't ask for. The second is the independent check that still holds when
+the application layer has a bug — **gating on the declared organization
+alone is not enough**, and was a real hole caught by the RLS-only test
+before this pattern was corrected (ADR-0012).
+
 `WITH CHECK` is required separately from `USING` — without it, nothing
 stops an `UPDATE` from moving a row into a different organization.
 Applied to every tenant table (`FOR ALL` covers SELECT/INSERT/UPDATE/DELETE).
@@ -337,11 +366,18 @@ direct, unauthenticated bucket/object reference.
 
 - **Full-stack test:** seed Org A and Org B, each with a patient. As an
   authenticated Org A owner, `GET /patients/:orgBPatientId` → expect 404.
-- **RLS-only test:** call the repository layer directly with the
-  app-layer `organizationId` filter deliberately removed, to confirm RLS
-  alone — independent of application code — still returns zero rows.
-  This is the test that actually proves defense-in-depth is working, not
-  just assumed.
+- **RLS-only test:** `packages/db/scripts/verify-rls-isolation.mjs` —
+  connects as `app_runtime`, sets only the identity session variables, and
+  asserts one user cannot read, enumerate, or write into another user's
+  organization. **Implemented and passing 6/6.** Not part of `pnpm test`
+  (it needs real credentials and a live database); run it manually:
+  ```bash
+  cd packages/db
+  DATABASE_URL="<app_runtime url>" node scripts/verify-rls-isolation.mjs <userA> <userB> <orgOfA>
+  ```
+  This is the test that actually proves defense-in-depth is working rather
+  than assumed — it found a real hole in `memberships_select` the first
+  time it ran (ADR-0012). **Re-run it whenever a tenant policy changes.**
 - **Role test:** as an `admin_staff` member of Org A, attempt to read a
   `clinical_notes` row belonging to a patient in Org A (same org, wrong
   role) → expect 404 at the app layer, and a direct RLS-only query to

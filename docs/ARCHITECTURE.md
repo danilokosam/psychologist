@@ -1,13 +1,13 @@
 # Architecture
 
-> **Implementation status (Milestone 0):** the monorepo, tooling, and a
-> thin end-to-end slice (Express `/health` + a Next.js page that calls it
-> over HTTP) are built and verified — see `docs/ROADMAP.md`. The
-> module-internal layering (Domain/Application/Infrastructure/Delivery)
-> described below is the agreed design for when real modules (patients,
-> appointments, ...) are added in later milestones; `apps/api` currently
-> has only operational routes (`routes/health.ts`), not yet any domain
-> module.
+> **Implementation status: Milestone 0 complete.** The monorepo, a real
+> Supabase project with RLS-protected schema, Supabase Auth verified in
+> Express via JWKS, and an empty dashboard behind a real login are built
+> and verified — see `docs/ROADMAP.md`. The module-internal layering
+> described below is no longer only a design: `apps/api/src/modules/accounts/`
+> implements it fully (domain → ports → use cases → Prisma adapter →
+> composition root → routes) and is the reference to copy when adding
+> patients, appointments and the rest.
 
 ## Shape: modular monolith
 
@@ -228,5 +228,16 @@ the same defense-in-depth principle as
 one layer up.
 
 > This monorepo scaffolding is in place (pnpm workspaces, no Turborepo —
-> see `README.md` for commands). The `modules/` folder shape above is not
-> created yet; it lands with the first real domain module in Milestone 1.
+> see `README.md` for commands), and the `modules/` shape above exists:
+> `modules/accounts/` is the worked reference. Two deviations from the
+> sketch above, both deliberate:
+>
+> 1. `withTenantContext` takes explicit `{ userId, organizationId }` rather
+>    than the Express `req`, so the shared DB layer carries no dependency on
+>    Express — consistent with the rule that non-delivery layers stay
+>    framework-free. Controllers read the values from the request and pass
+>    them in. A `withUserContext` sibling exists for the queries that
+>    legitimately run before any organization is selected.
+> 2. `routes/health.ts` sits outside `modules/` on purpose: there is no
+>    business entity called "health", so it is operational infrastructure,
+>    not a domain module.

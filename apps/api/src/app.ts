@@ -1,7 +1,8 @@
 import cors from 'cors';
 import express from 'express';
 import { healthRouter } from './routes/health';
-import { errorHandler } from './middleware/error-handler';
+import { accountsRouter } from './modules/accounts/delivery/http/accounts.routes';
+import { errorHandler } from './shared/middleware/error-handler';
 
 // Exported separately from server.ts so tests can exercise the app with
 // supertest without binding a real TCP port.
@@ -14,6 +15,7 @@ export function createApp() {
   app.use(express.json());
 
   app.use(healthRouter);
+  app.use(accountsRouter);
 
   // Must be registered after all routes.
   app.use(errorHandler);

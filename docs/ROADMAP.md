@@ -11,12 +11,9 @@ implies (explain before implementing, verify before marking complete).
 ## Milestones
 
 ### Milestone 0 — Foundations
-**Status: IN PROGRESS** — tooling/scaffolding done; Supabase/Prisma
-schema and auth wiring deliberately split out as the next unit of work
-(building `profiles`/`organizations`/`memberships` + RLS before
-Supabase Auth exists to populate them would have been exactly the kind
-of placeholder-for-future-functionality this milestone was scoped to
-avoid — see `CLAUDE.md` for the full note).
+**Status: COMPLETED** — delivered in three passes: tooling/scaffolding,
+then real Supabase infrastructure (schema + RLS), then auth wiring and
+the tenant-context plumbing.
 
 Objective: a deployable skeleton with the security/tenancy model proven,
 not yet any real feature.
@@ -39,15 +36,25 @@ Done since (Milestone 0.5 — real Supabase infrastructure):
 - [x] RLS enabled + forced on all three tables, with real policies (see `docs/SECURITY.md`) — verified via `supabase db advisors` (two real issues found and fixed: an unindexed FK, and duplicate permissive policies merged into one each).
 - [x] `profiles.id → auth.users.id` FK — applied via a separate privileged-connection path, not Prisma; see [ADR-0011](decisions/0011-profiles-auth-fk-via-privileged-connection.md).
 
-Not done (still pending before Milestone 1 features start):
-- [ ] `withTenantContext` helper implemented in `apps/api` (design exists in `docs/SECURITY.md`, no code yet — Prisma isn't a dependency of `apps/api` yet).
-- [ ] Supabase Auth wiring (frontend SDK + Express JWT verification middleware).
-- [ ] Startup assertion rejecting a `BYPASSRLS` DB role (application code, not yet written).
-- [ ] `app_runtime`'s pooled connection string assembled and wired anywhere.
+Done in the final pass (auth + tenant context):
+- [x] `withTenantContext` / `withUserContext` implemented, with `app_runtime`'s pooled (transaction-mode) connection wired into `apps/api`.
+- [x] Startup assertion rejecting a `BYPASSRLS` role — verified live: `Database role "app_runtime" verified: Row Level Security applies.`
+- [x] Supabase Auth wiring: JWKS/ES256 token verification in Express (`jose`), `@supabase/ssr` cookie sessions, login/sign-up UI, `/dashboard` protected by the Next.js proxy.
+- [x] `modules/accounts/` built as the worked ports-and-adapters reference (ADR-0009): domain → ports → use cases → Prisma adapter → composition root → routes.
+- [x] Endpoints `POST /auth/bootstrap`, `GET /me`, `GET /organizations/current` (see `docs/API.md`).
+- [x] RLS-only cross-tenant isolation test passing 6/6, after it found and forced the fix of a real hole (ADR-0012).
 
-**DoD (not yet met):** can sign up, create an org, see an empty
-dashboard, deployed to staging; startup assertion rejects a `BYPASSRLS`
-DB role.
+**DoD: met.** Verified against the real project with two synthetic users:
+sign up → account bootstrapped (profile + solo practice, `owner`
+membership) → empty dashboard rendered behind a real session → a second
+user received a 404, not a 403, for the first user's organization, at both
+the application and RLS layers. The startup assertion rejects a
+`BYPASSRLS` role. Synthetic fixtures were deleted afterwards; the tables
+are empty.
+
+Not part of the DoD as originally written, and still open: **deployment to
+staging.** No Vercel/hosting setup exists yet — tracked as the first task
+of whichever milestone we decide to deploy in.
 
 ### Milestone 1 — Organizations & Membership + RBAC
 **Status: NOT STARTED**

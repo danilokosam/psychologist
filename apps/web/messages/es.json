@@ -5,6 +5,30 @@
     "apiStatusLabel": "Estado de la API",
     "apiStatusChecking": "Comprobando...",
     "apiStatusOk": "Conectado (última comprobación: {timestamp})",
-    "apiStatusError": "No se puede contactar con la API"
+    "apiStatusError": "No se puede contactar con la API",
+    "signIn": "Iniciar sesión"
+  },
+  "auth": {
+    "title": "Iniciar sesión",
+    "subtitle": "Accede a tu consulta.",
+    "email": "Correo electrónico",
+    "password": "Contraseña",
+    "signIn": "Iniciar sesión",
+    "signUp": "Crear cuenta",
+    "pending": "Un momento...",
+    "switchToSignUp": "¿No tienes cuenta? Crea una",
+    "switchToSignIn": "¿Ya tienes cuenta? Inicia sesión",
+    "checkYourEmail": "Revisa tu correo para confirmar la cuenta."
+  },
+  "dashboard": {
+    "title": "Panel",
+    "emptyState": "Todavía no hay nada que mostrar — pacientes, citas y sesiones llegan en hitos posteriores.",
+    "defaultPracticeName": "Mi consulta",
+    "loading": "Cargando tu cuenta...",
+    "loadFailed": "No se pudo cargar tu cuenta: {message}",
+    "signedInAs": "Sesión iniciada como",
+    "practice": "Consulta",
+    "role": "Rol",
+    "signOut": "Cerrar sesión"
   }
 }

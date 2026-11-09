@@ -3,16 +3,19 @@
   "private": true,
   "version": "0.0.0",
   "main": "generated/client/index.js",
+  "types": "generated/client/index.d.ts",
   "scripts": {
     "generate": "prisma generate",
-    "typecheck": "echo \"no TypeScript source in @psych/db yet -- only a Prisma schema\" && exit 0",
-    "lint": "echo \"nothing to lint in @psych/db yet\" && exit 0",
+    "migrate:deploy": "prisma migrate deploy",
+    "build": "prisma generate",
+    "typecheck": "echo \"no hand-written TypeScript in @psych/db -- only a Prisma schema\" && exit 0",
+    "lint": "echo \"nothing to lint in @psych/db\" && exit 0",
     "test": "echo \"no tests in @psych/db yet\" && exit 0"
   },
   "dependencies": {
-    "@prisma/client": "^6.1.0"
+    "@prisma/client": "^6.13.0"
   },
   "devDependencies": {
-    "prisma": "^6.1.0"
+    "prisma": "^6.13.0"
   }
 }
