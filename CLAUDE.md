@@ -237,8 +237,9 @@ drift). `schema.prisma` must always match the migrations — CI fails
 otherwise. Details: README "CI/CD".
 
 **Dependabot PRs** (weekly, `dependabot[bot]`): handle them per the table in
-README "Dependabot" — merge green minor/patch groups; read changelogs for
-majors; for lockfile conflicts comment `@dependabot rebase` (never resolve
+README "Dependabot" — merge green minor/patch groups; **major versions are
+deferred to Milestone 6** (close + `ignore` rule + row in ROADMAP "Deferred
+dependency upgrades"), except when the `audit` job forces one for security; for lockfile conflicts comment `@dependabot rebase` (never resolve
 `pnpm-lock.yaml` by hand); close unwanted/breaking ones *with the reason*
 and add an `ignore` rule in `.github/dependabot.yml` with a comment. Merge
 them one at a time — each must be up to date with `main` and green.

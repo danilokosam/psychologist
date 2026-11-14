@@ -26,5 +26,6 @@ overrides:
   # Only reached through @prisma/config 6.x (the Prisma CLI's config
   # loader), never with request data -- but production dependencies must
   # pass `pnpm audit --prod --audit-level high` in CI. Remove when Prisma is
-  # upgraded to a version that depends on deepmerge-ts >= 8 itself.
+  # upgraded to a version that depends on deepmerge-ts >= 8 itself (Prisma 7,
+  # deferred to Milestone 6 -- docs/ROADMAP.md "Deferred dependency upgrades").
   deepmerge-ts: ^8.0.2

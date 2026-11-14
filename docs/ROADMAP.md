@@ -101,7 +101,7 @@ Follow-ups, done after the merge (2026-11-14):
 Still open:
 - Supabase Auth **leaked-password protection** (HaveIBeenPwned check) is off — the remaining `supabase db advisors` finding. **Blocked by the plan:** it is a Pro-plan feature and the project is on the Free plan (confirmed 2026-11-14 — the dashboard refuses the toggle). It cannot be set from the CLI either (not in the CLI's config schema). Acceptable while only synthetic test accounts exist; decided at Milestone 6 (see there). **Compensating control applied:** password policy raised to min 10 chars with lower/upper/digit/symbol (was 6, no requirements) — see `docs/SECURITY.md`.
 - Sign-up page heading still says "Sign in" in sign-up mode (cosmetic).
-- **TypeScript 7** fails typecheck and the integration suite (Dependabot PR #3, closed). Needs a planned migration; TS majors are ignored by Dependabot until then.
+- Major dependency upgrades (TypeScript 7, Prisma 7, Express 5, vitest 5): deferred to Milestone 6 — see "Deferred dependency upgrades" below.
 
 Dependabot's first batch (2026-11-14): merged #2 (7 minor/patch: Next 16.4.6, React 19.3.1, next-intl 4.15, typescript-eslint), #4 (`@types/supertest` 7), #6 (ESLint 10) — each through green CI on a branch up to date with `main`. Closed #3 (TypeScript 7, CI red) and #5 (`@types/node` 26 ≠ our Node 22 runtime); both ignored in `.github/dependabot.yml`. `apps/web` was also on `@types/node` 20 — aligned to 22.
 
@@ -132,8 +132,34 @@ Dependabot's first batch (2026-11-14): merged #2 (7 minor/patch: Next 16.4.6, Re
 - Rate limiting, error monitoring (Sentry), backup verification, privacy policy + DPA template, security review, DPIA completed, legal/DPO review of `docs/DATA-INVENTORY.md`.
 - Verify Supabase Auth "Confirm email" is enforced in production (ADR-0013's email binding relies on it).
 - Leaked-password protection: requires upgrading the Supabase project to Pro. Decide before real users: upgrade (also brings daily backups/PITR options relevant to the backup-verification item above), or document compensating controls (stronger password policy, rate limiting, MFA).
+- **Evaluate and apply the deferred dependency upgrades** (table below) — each as its own PR through green CI, *before* real data is admitted, so a regression can only ever hit synthetic data. Then remove the corresponding `ignore` rules from `.github/dependabot.yml` (and the `deepmerge-ts` override once on Prisma 7).
 - **Delete the synthetic `@example.test` test accounts** (`docs/TEST-ACCOUNTS.md`) and their organizations before any real data is admitted — they share a documented password.
 - **DoD:** ready to onboard pilot psychologists under a signed beta agreement. **Real patient data is permitted only after this milestone's legal review is complete** — synthetic data only until then.
+
+## Deferred dependency upgrades
+
+**Decision (2026-11-14):** major versions of core dependencies are not
+upgraded while features are being built. Each can require real code changes,
+and mixing those with feature work makes regressions hard to attribute. They
+are evaluated **together in Milestone 6** — not after the last milestone,
+because Milestone 6 is the last point before real patient data, and a large
+migration is safest while only synthetic data exists.
+
+- **Exception — security:** if the CI `audit` job fails because a
+  high/critical production vulnerability is fixed only in a new major (as
+  happened with zod 3 → 4), that upgrade happens immediately, in whatever
+  milestone we are in.
+- Minor and patch updates are not deferred; Dependabot keeps proposing them.
+- Each deferred major is ignored in `.github/dependabot.yml` (with a comment)
+  so its PR isn't reopened every week; the PRs were closed with this reason.
+
+| Package | Current | Proposed | CI on the proposal | Why deferred / what it involves | Risk if left | Closed PR |
+|---|---|---|---|---|---|---|
+| `prisma` + `@prisma/client` | 6.19.3 | 7.x | ❌ red | ORM major: generator/client and configuration changes; CLI and client must move together (Dependabot proposed them separately). Every milestone adds models and migrations on top, so this is the largest one. Unlocks dropping the `deepmerge-ts` override. | Medium: the cost grows with each milestone; check Prisma 6's support window at Milestone 6 | #9, #11 |
+| `express` + `@types/express` | 4.22 | 5.x | ✅ green | The API framework itself: routing/path syntax, query parsing and error-handling behaviour that tests may not fully cover. Read the migration guide, then re-run the full suite + a browser pass. | Low–medium: Express 4 is in maintenance | #12 |
+| `typescript` | 5.9 | 7.x | ❌ red | Typecheck and the integration suite fail; needs a planned migration. | Low: 5.x keeps working | #3 |
+| `vitest` | 4.1 | 5.x | ✅ green | Dev-only (never ships). Deferred only to keep one simple rule. | Very low | #10 |
+| `@types/node` | 22 | 26 | — | Not deferred for risk: types must match the runtime (`.nvmrc` = 22). Moves only when we change Node versions. | None | #5 |
 
 ### Post-MVP (sequence by real customer feedback, not by this order)
 Email reminders (Resend), Stripe subscription billing, clinic
