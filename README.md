@@ -192,9 +192,50 @@ gh pr checks --watch                 # wait for green
 gh pr merge --merge --delete-branch  # only possible once all checks pass
 ```
 
-**Dependabot** (`.github/dependabot.yml`) opens weekly PRs for npm packages
-(minor/patch grouped, majors separate) and GitHub Actions; they go through
-the same checks. Actions are pinned to commit SHAs.
+### Dependabot — keeping dependencies current
+
+**What it is.** A GitHub bot that watches this repository's dependencies
+(the npm packages in `pnpm-lock.yaml` and the GitHub Actions used by CI) and,
+when a newer version exists, opens a pull request that updates it. It is
+configured in `.github/dependabot.yml` and runs weekly. Its PRs are authored
+by `dependabot[bot]`.
+
+**Why we use it.** Dependencies age without us touching our own code: new
+vulnerabilities are published against versions we already use (that is how
+zod 3 became a DoS risk for the API's input validation), and the longer
+upgrades wait, the bigger and riskier they get. Dependabot turns that into a
+small, regular stream of reviewable PRs. Because `main` is protected, every
+one of them must pass the same `check`, `integration` and `audit` jobs as our
+own code — an upgrade that breaks something simply cannot be merged (TypeScript
+7 was stopped exactly this way). It also keeps the SHA-pinned GitHub Actions
+up to date, which would otherwise be easy to forget.
+
+**How it is configured.**
+- npm: minor and patch updates are **grouped into one PR**; each **major**
+  update gets its own PR, since majors can need code changes.
+- GitHub Actions: all updates grouped.
+- Deliberately ignored, with the reason in the config: `@types/node` majors
+  (types must match the Node version we run — bump with `.nvmrc`) and
+  `typescript` majors (TS 7 needs a planned migration).
+
+**How to handle its PRs.**
+
+| Situation | What to do |
+|---|---|
+| Minor/patch group, CI green | Merge. Read the release notes if a package matters (Next, Prisma, Supabase). |
+| Major update, CI green | Read the changelog for behaviour changes CI wouldn't catch, then merge. |
+| Major update, CI red | It needs a real migration: close the PR with the reason, add an `ignore` rule with a comment, and track the migration in `docs/ROADMAP.md`. |
+| Merge conflict (usually `pnpm-lock.yaml`, after another PR merged) | Comment `@dependabot rebase` — it regenerates the lockfile with pnpm. Don't resolve lockfile conflicts by hand. |
+| "Branch out of date" (`main` moved, no conflict) | Same `@dependabot rebase`, or `gh api -X PUT repos/<owner>/<repo>/pulls/<n>/update-branch`. Then wait for CI again. |
+| Not wanted (e.g. types newer than our runtime) | Close with the reason and add an `ignore` rule, so it isn't proposed again. |
+
+Merge one Dependabot PR at a time: each merge moves `main`, and the next PR
+must be brought up to date and re-pass CI before it can merge (that's the
+"up to date" requirement of the ruleset doing its job). The `audit` job's
+non-blocking report shows what's still outstanding.
+
+Actions are pinned to commit SHAs; Dependabot updates the SHA and the
+version comment together.
 
 **CD: not set up yet.** Nothing deploys automatically (no Vercel project
 exists — see `docs/ROADMAP.md`). Database changes reach Supabase manually, in
