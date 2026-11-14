@@ -1,3 +1,4 @@
+import { Prisma } from '@psych/db';
 import type { NextFunction, Request, Response } from 'express';
 
 // A typed error that routes/use-cases can throw to control the HTTP status
@@ -21,9 +22,17 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     return;
   }
 
-  // Unexpected errors are logged with full detail server-side, but the
-  // client only ever receives a generic message -- never leak internals
-  // (stack traces, DB error text) to the response body.
-  console.error(err);
+  // Unexpected errors are logged server-side, but the client only ever
+  // receives a generic message -- never leak internals (stack traces, DB
+  // error text) to the response body.
+  //
+  // Prisma *validation* errors echo the query arguments in their message --
+  // which, on the clinical routes, could include note content (Art. 9 health
+  // data). Those are logged by class name only, never by message.
+  if (err instanceof Prisma.PrismaClientValidationError) {
+    console.error(`${err.name}: message withheld (may contain request data)`);
+  } else {
+    console.error(err);
+  }
   res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Unexpected server error' } });
 }

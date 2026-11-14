@@ -65,7 +65,7 @@ export async function makeUser(label: string): Promise<TestUser> {
 /** Wipes all tenant data between test files. Privileged on purpose. */
 export async function resetDatabase() {
   await adminDb.$executeRawUnsafe(
-    'TRUNCATE TABLE appointments, patients, invitations, memberships, organizations, profiles RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE audit_logs, clinical_note_versions, clinical_notes, clinical_sessions, appointments, patients, invitations, memberships, organizations, profiles RESTART IDENTITY CASCADE',
   );
 }
 

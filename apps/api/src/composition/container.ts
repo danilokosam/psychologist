@@ -26,6 +26,21 @@ import {
   getAppointment,
   listAppointments,
 } from '../modules/appointments/application/use-cases/read-appointments';
+import { PrismaClinicalSessionRepository } from '../modules/clinical/infrastructure/prisma-clinical-session-repository';
+import { PrismaClinicalNoteRepository } from '../modules/clinical/infrastructure/prisma-clinical-note-repository';
+import {
+  correctSession,
+  getSession,
+  listSessions,
+  recordSession,
+} from '../modules/clinical/application/use-cases/sessions';
+import {
+  openNote,
+  readNoteHistory,
+  readSessionNotes,
+  reviseNote,
+} from '../modules/clinical/application/use-cases/notes';
+import { PrismaAuditTrail } from '../shared/audit/prisma-audit-trail';
 import { PrismaPatientRepository } from '../modules/patients/infrastructure/prisma-patient-repository';
 import { createPatient } from '../modules/patients/application/use-cases/create-patient';
 import { getPatient, listPatients } from '../modules/patients/application/use-cases/read-patients';
@@ -104,5 +119,28 @@ export function buildAppointmentsModule(tx: Tx) {
     getAppointment: (input: Parameters<typeof getAppointment>[0]) => getAppointment(input, { appointments }),
     listAppointments: (input: Parameters<typeof listAppointments>[0]) =>
       listAppointments(input, { appointments }),
+  };
+}
+
+/**
+ * Clinical sessions and notes (F-008, F-009, F-012). The audit trail is built
+ * on the same transaction as the repositories, so an access and its audit
+ * record commit or roll back together.
+ */
+export function buildClinicalModule(tx: Tx) {
+  const sessions = new PrismaClinicalSessionRepository(tx);
+  const notes = new PrismaClinicalNoteRepository(tx);
+  const audit = new PrismaAuditTrail(tx);
+  const deps = { sessions, notes, audit };
+
+  return {
+    recordSession: (input: Parameters<typeof recordSession>[0]) => recordSession(input, { sessions }),
+    correctSession: (input: Parameters<typeof correctSession>[0]) => correctSession(input, { sessions }),
+    getSession: (input: Parameters<typeof getSession>[0]) => getSession(input, { sessions }),
+    listSessions: (input: Parameters<typeof listSessions>[0]) => listSessions(input, { sessions }),
+    readSessionNotes: (input: Parameters<typeof readSessionNotes>[0]) => readSessionNotes(input, deps),
+    openNote: (input: Parameters<typeof openNote>[0]) => openNote(input, deps),
+    reviseNote: (input: Parameters<typeof reviseNote>[0]) => reviseNote(input, deps),
+    readNoteHistory: (input: Parameters<typeof readNoteHistory>[0]) => readNoteHistory(input, deps),
   };
 }

@@ -5,6 +5,7 @@ import { accountsRouter } from './modules/accounts/delivery/http/accounts.routes
 import { invitationsRouter } from './modules/organizations/delivery/http/invitations.routes';
 import { patientsRouter } from './modules/patients/delivery/http/patients.routes';
 import { appointmentsRouter } from './modules/appointments/delivery/http/appointments.routes';
+import { clinicalRouter } from './modules/clinical/delivery/http/clinical.routes';
 import { membersRouter } from './modules/organizations/delivery/http/members.routes';
 import { AppError, errorHandler } from './shared/middleware/error-handler';
 
@@ -24,6 +25,7 @@ export function createApp() {
   app.use(membersRouter);
   app.use(patientsRouter);
   app.use(appointmentsRouter);
+  app.use(clinicalRouter);
 
   // Unknown routes answer in the same JSON error shape as everything else
   // (docs/API.md), not Express's default HTML page -- which also named the
