@@ -7,6 +7,7 @@ import {
   type EditablePatientStatus,
   type Patient,
 } from '@psych/types';
+import { ui } from '@/lib/ui';
 
 type Values = {
   fullName: string;
@@ -101,15 +102,12 @@ export function PatientForm({
     }
   }
 
-  const inputClass =
-    'w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm aria-[invalid=true]:border-red-500 dark:border-zinc-700 dark:bg-zinc-900';
-
   return (
-    <form onSubmit={submit} noValidate className="space-y-3">
-      <fieldset disabled={disabled || pending} className="space-y-3">
+    <form onSubmit={submit} noValidate>
+      <fieldset disabled={disabled || pending} className="grid gap-4 sm:grid-cols-2">
         {FIELDS.map((field) => (
-          <div key={field} className="space-y-1">
-            <label htmlFor={`patient-${field}`} className="block text-sm text-zinc-700 dark:text-zinc-300">
+          <div key={field} className={`space-y-1.5 ${field === 'fullName' ? 'sm:col-span-2' : ''}`}>
+            <label htmlFor={`patient-${field}`} className={ui.label}>
               {t(`fields.${field}`)}
               {field === 'fullName' ? ' *' : null}
             </label>
@@ -124,17 +122,17 @@ export function PatientForm({
               aria-invalid={invalid.has(field)}
               aria-describedby={invalid.has(field) ? `patient-${field}-error` : undefined}
               required={field === 'fullName'}
-              className={inputClass}
+              className={ui.input}
             />
             {invalid.has(field) ? (
-              <p id={`patient-${field}-error`} className="text-xs text-red-600 dark:text-red-400">
+              <p id={`patient-${field}-error`} className={ui.fieldError}>
                 {t(`invalid.${field}`)}
               </p>
             ) : null}
           </div>
         ))}
-        <div className="space-y-1">
-          <label htmlFor="patient-status" className="block text-sm text-zinc-700 dark:text-zinc-300">
+        <div className="space-y-1.5">
+          <label htmlFor="patient-status" className={ui.label}>
             {t('fields.status')}
           </label>
           <select
@@ -143,7 +141,7 @@ export function PatientForm({
             // only by the owner's restore action, never by this form.
             value={patient?.status === 'archived' ? 'archived' : values.status}
             onChange={(event) => set('status', event.target.value as EditablePatientStatus)}
-            className={inputClass}
+            className={ui.input}
           >
             {patient?.status === 'archived' ? <option value="archived">{t('status.archived')}</option> : null}
             <option value="active">{t('status.active')}</option>
@@ -152,7 +150,7 @@ export function PatientForm({
         </div>
         <button
           type="submit"
-          className="rounded bg-black px-3 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black"
+          className={`${ui.button.primary} self-end sm:col-span-2 sm:justify-self-start`}
         >
           {pending ? t('saving') : submitLabel}
         </button>

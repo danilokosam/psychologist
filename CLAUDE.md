@@ -192,6 +192,22 @@ values (status codes, enums) are always language-independent; formatting
 of dates/currency uses `Intl` APIs driven by locale.
 See [ADR-0007](docs/decisions/0007-english-first-i18n.md).
 
+## UI conventions (apps/web)
+
+- **Colors only through the semantic tokens** in `apps/web/src/app/globals.css`
+  (`bg-surface`, `text-muted`, `bg-primary`, `border-border`,
+  `bg-danger-soft`…), never raw palette classes (`zinc-*`, `bg-black`) and
+  never `dark:` variants — light and dark are each defined once, in the
+  tokens. Every token pair meets WCAG AA; keep it that way when adding one.
+- Reuse `apps/web/src/lib/ui.ts` (buttons, inputs, cards, headings) and
+  `components/ui/feedback.tsx` (`Badge`, `Alert`, `Spinner`, status→tone
+  maps) instead of restyling elements per screen.
+- **Motion budget:** 150 ms color transitions on interactive elements and the
+  loading spinner — nothing else. No new animations without a functional
+  reason; `prefers-reduced-motion` disables all of it.
+- Theme is light / dark / system (`lib/theme.ts`), applied before first paint
+  by an inline script in `layout.tsx`. No UI dependencies beyond Tailwind.
+
 ## Coding conventions and development standards
 
 - All code, identifiers, comments, and documentation: **English**.

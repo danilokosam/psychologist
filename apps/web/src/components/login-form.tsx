@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { ui } from '@/lib/ui';
+import { Alert } from './ui/feedback';
 
 type Mode = 'signIn' | 'signUp';
 
@@ -69,8 +71,8 @@ export function LoginForm() {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       {mode === 'signUp' ? (
-        <div className="space-y-1">
-          <label htmlFor="full-name" className="block text-sm font-medium">
+        <div className="space-y-1.5">
+          <label htmlFor="full-name" className={ui.label}>
             {t('fullName')}
           </label>
           <input
@@ -81,12 +83,12 @@ export function LoginForm() {
             autoComplete="name"
             value={fullName}
             onChange={(event) => setFullName(event.target.value)}
-            className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className={ui.input}
           />
         </div>
       ) : null}
-      <div className="space-y-1">
-        <label htmlFor="email" className="block text-sm font-medium">
+      <div className="space-y-1.5">
+        <label htmlFor="email" className={ui.label}>
           {t('email')}
         </label>
         <input
@@ -96,12 +98,12 @@ export function LoginForm() {
           autoComplete="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
-          className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className={ui.input}
         />
       </div>
 
-      <div className="space-y-1">
-        <label htmlFor="password" className="block text-sm font-medium">
+      <div className="space-y-1.5">
+        <label htmlFor="password" className={ui.label}>
           {t('password')}
         </label>
         <input
@@ -115,26 +117,24 @@ export function LoginForm() {
           autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
-          className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          className={ui.input}
         />
         {mode === 'signUp' ? (
-          <p id="password-rule" className="text-xs text-zinc-600 dark:text-zinc-400">
+          <p id="password-rule" className="text-xs text-muted">
             {t('passwordRule')}
           </p>
         ) : null}
       </div>
 
       {error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {error}
-        </p>
+        <Alert tone="danger">{error}</Alert>
       ) : null}
-      {notice ? <p className="text-sm text-zinc-600 dark:text-zinc-400">{notice}</p> : null}
+      {notice ? <Alert tone="success">{notice}</Alert> : null}
 
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded bg-zinc-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+        className={`${ui.button.primary} w-full`}
       >
         {pending ? t('pending') : mode === 'signIn' ? t('signIn') : t('signUp')}
       </button>
@@ -146,7 +146,7 @@ export function LoginForm() {
           setError(null);
           setNotice(null);
         }}
-        className="w-full text-sm text-zinc-600 underline dark:text-zinc-400"
+        className={`${ui.link} w-full text-sm`}
       >
         {mode === 'signIn' ? t('switchToSignUp') : t('switchToSignIn')}
       </button>

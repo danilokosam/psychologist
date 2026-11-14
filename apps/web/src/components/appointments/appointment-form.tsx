@@ -13,6 +13,8 @@ import {
 } from '@psych/types';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { fromInputs, toDateInput, toTimeInput } from '@/lib/calendar';
+import { ui } from '@/lib/ui';
+import { Alert } from '../ui/feedback';
 
 export type AppointmentFormValues = {
   patientId: string;
@@ -154,19 +156,19 @@ export function AppointmentForm({
     }
   }
 
-  const field = 'w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900';
-  const label = 'block text-sm text-zinc-700 dark:text-zinc-300';
+  const field = ui.input;
+  const label = ui.label;
 
   return (
-    <form onSubmit={submit} className="space-y-3">
-      <fieldset disabled={pending} className="space-y-3">
-        <div className="space-y-1">
+    <form onSubmit={submit}>
+      <fieldset disabled={pending} className="space-y-4">
+        <div className="space-y-1.5">
           <span className={label}>{t('patient')}</span>
           {patient ? (
-            <p className="flex items-center justify-between text-sm font-medium">
+            <p className="flex items-center justify-between rounded-lg border border-border bg-surface-muted px-3 py-2 text-sm font-medium">
               {patient.fullName}
               {appointment ? null : (
-                <button type="button" onClick={() => setPatient(null)} className="text-xs font-normal underline">
+                <button type="button" onClick={() => setPatient(null)} className={`${ui.link} text-xs`}>
                   {t('changePatient')}
                 </button>
               )}
@@ -186,14 +188,14 @@ export function AppointmentForm({
                 className={field}
               />
               {query.trim().length >= 2 ? (
-                <ul className="divide-y divide-zinc-200 rounded border border-zinc-200 text-sm dark:divide-zinc-800 dark:border-zinc-800">
-                  {matches.length === 0 ? <li className="px-2 py-1 text-zinc-500">{t('noPatientMatches')}</li> : null}
+                <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface text-sm shadow-sm">
+                  {matches.length === 0 ? <li className="px-3 py-2 text-muted">{t('noPatientMatches')}</li> : null}
                   {matches.map((p) => (
                     <li key={p.id}>
                       <button
                         type="button"
                         onClick={() => setPatient({ id: p.id, fullName: p.fullName })}
-                        className="w-full px-2 py-1 text-left hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                        className="w-full px-3 py-2 text-left transition-colors duration-150 hover:bg-primary-soft hover:text-primary-soft-foreground"
                       >
                         {p.fullName}
                       </button>
@@ -205,20 +207,20 @@ export function AppointmentForm({
           )}
         </div>
 
-        <div className="grid grid-cols-3 gap-2">
-          <div className="space-y-1">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="space-y-1.5">
             <label htmlFor="appointment-date" className={label}>
               {t('date')}
             </label>
             <input id="appointment-date" type="date" required value={date} onChange={(e) => setDate(e.target.value)} className={field} />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <label htmlFor="appointment-time" className={label}>
               {t('time')}
             </label>
             <input id="appointment-time" type="time" required step={300} value={time} onChange={(e) => setTime(e.target.value)} className={field} />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <label htmlFor="appointment-duration" className={label}>
               {t('duration')}
             </label>
@@ -232,7 +234,7 @@ export function AppointmentForm({
           </div>
         </div>
 
-        <div className="space-y-1">
+        <div className="space-y-1.5">
           <label htmlFor="appointment-professional" className={label}>
             {t('professional')}
           </label>
@@ -260,8 +262,8 @@ export function AppointmentForm({
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="space-y-1.5">
             <label htmlFor="appointment-modality" className={label}>
               {t('modalityLabel')}
             </label>
@@ -270,7 +272,7 @@ export function AppointmentForm({
               <option value="online">{t('modality.online')}</option>
             </select>
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <label htmlFor="appointment-status" className={label}>
               {t('statusLabel')}
             </label>
@@ -285,12 +287,10 @@ export function AppointmentForm({
         </div>
 
         {error ? (
-          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-            {t(error)}
-          </p>
+          <Alert tone="danger">{t(error)}</Alert>
         ) : null}
 
-        <button type="submit" className="rounded bg-black px-3 py-1.5 text-sm text-white disabled:opacity-50 dark:bg-white dark:text-black">
+        <button type="submit" className={ui.button.primary}>
           {pending ? t('saving') : submitLabel}
         </button>
       </fieldset>

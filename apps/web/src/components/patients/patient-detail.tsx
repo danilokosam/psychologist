@@ -6,6 +6,8 @@ import { patientResponseSchema, type MembershipRole, type Patient } from '@psych
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { PatientForm, type PatientFormValues } from './patient-form';
 import { PatientAppointments } from '../appointments/patient-appointments';
+import { ui } from '@/lib/ui';
+import { Alert, Badge, PATIENT_STATUS_TONE, Spinner } from '../ui/feedback';
 
 type State = { kind: 'loading' } | { kind: 'ready'; patient: Patient } | { kind: 'not_found' } | { kind: 'error' };
 
@@ -82,74 +84,61 @@ export function PatientDetail({
     }
   }
 
-  if (state.kind === 'loading') return <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('loading')}</p>;
-  if (state.kind === 'not_found') return <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('notFound')}</p>;
-  if (state.kind === 'error') {
-    return (
-      <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-        {t('loadFailed')}
-      </p>
-    );
-  }
+  if (state.kind === 'loading') return <Spinner label={t('loading')} />;
+  if (state.kind === 'not_found') return <p className={ui.muted}>{t('notFound')}</p>;
+  if (state.kind === 'error') return <Alert tone="danger">{t('loadFailed')}</Alert>;
 
   const { patient } = state;
   const archived = patient.status === 'archived';
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-zinc-50">{patient.fullName}</h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {t(`status.${patient.status}`)}
+      <div className="space-y-2">
+        <h1 className={ui.h1}>{patient.fullName}</h1>
+        <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+          <Badge tone={PATIENT_STATUS_TONE[patient.status]}>{t(`status.${patient.status}`)}</Badge>
           {patient.archivedAt
             ? ` · ${t('archivedOn', { date: format.dateTime(new Date(patient.archivedAt), { dateStyle: 'medium' }) })}`
             : null}
         </p>
       </div>
 
-      {message ? (
-        <p
-          role={message.tone === 'error' ? 'alert' : 'status'}
-          className={`text-sm ${message.tone === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}
-        >
-          {message.text}
-        </p>
-      ) : null}
+      {message ? <Alert tone={message.tone === 'error' ? 'danger' : 'success'}>{message.text}</Alert> : null}
 
-      {archived ? <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('archivedReadOnly')}</p> : null}
+      {archived ? <Alert tone="info">{t('archivedReadOnly')}</Alert> : null}
 
-      <div className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className={ui.card}>
         <PatientForm key={formKey} patient={patient} submitLabel={t('save')} onSubmit={save} disabled={archived} />
       </div>
 
       <PatientAppointments organizationId={organizationId} patientId={patient.id} canBook={!archived} />
 
       {role === 'owner' ? (
-        <div className="space-y-2 rounded border border-zinc-200 bg-white p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="font-medium">{t('archiveTitle')}</h2>
-          <p className="text-zinc-600 dark:text-zinc-400">{t('archiveExplanation')}</p>
+        <div className={`${ui.card} space-y-3`}>
+          <h2 className={ui.h2}>{t('archiveTitle')}</h2>
+          <p className={ui.muted}>{t('archiveExplanation')}</p>
           {archived ? (
-            <button type="button" onClick={() => void transition('restore')} className="underline">
+            <button type="button" onClick={() => void transition('restore')} className={ui.button.secondary}>
               {t('restore')}
             </button>
           ) : confirmingArchive ? (
             // An inline second step rather than window.confirm(), which
             // blocks the page and can't be translated or styled.
-            <span className="space-x-3">
-              <span>{t('archiveConfirm')}</span>
+            <span className="flex flex-wrap items-center gap-3 text-sm">
+              <span className="font-medium">{t('archiveConfirm')}</span>
               <button
                 type="button"
                 onClick={() => void transition('archive')}
-                className="font-medium text-red-700 underline dark:text-red-400"
+                className={ui.button.danger}
               >
                 {t('archiveYes')}
               </button>
-              <button type="button" onClick={() => setConfirmingArchive(false)} className="underline">
+              <button type="button" onClick={() => setConfirmingArchive(false)} className={ui.button.ghost}>
                 {t('cancel')}
               </button>
             </span>
           ) : (
-            <button type="button" onClick={() => setConfirmingArchive(true)} className="text-red-700 underline dark:text-red-400">
+            <button type="button" onClick={() => setConfirmingArchive(true)} className={ui.button.danger}>
               {t('archive')}
             </button>
           )}

@@ -41,14 +41,14 @@ export function LocaleSwitcher() {
   }
 
   return (
-    <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-400">
+    <label className="flex items-center text-sm text-muted">
       <span className="sr-only">{t('label')}</span>
       <select
         aria-label={t('label')}
         value={current}
         disabled={isPending}
         onChange={(event) => void onChange(event.target.value)}
-        className="rounded border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+        className="rounded-lg border border-border bg-surface-muted px-2 py-1.5 text-sm font-medium text-foreground transition-colors duration-150 hover:border-border-strong disabled:opacity-50"
       >
         {supportedLocaleSchema.options.map((locale) => (
           <option key={locale} value={locale} lang={locale}>

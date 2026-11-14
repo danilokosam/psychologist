@@ -7,6 +7,8 @@ import { appointmentResponseSchema, type Appointment } from '@psych/types';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { toDateInput } from '@/lib/calendar';
 import { AppointmentForm, appointmentErrorKey, type AppointmentFormValues } from './appointment-form';
+import { ui } from '@/lib/ui';
+import { Alert, APPOINTMENT_STATUS_TONE, Badge, Spinner } from '../ui/feedback';
 
 type State = { kind: 'loading' } | { kind: 'ready'; appointment: Appointment } | { kind: 'not_found' } | { kind: 'error' };
 
@@ -69,15 +71,9 @@ export function AppointmentDetail({ organizationId, appointmentId }: { organizat
     }
   }
 
-  if (state.kind === 'loading') return <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('loading')}</p>;
-  if (state.kind === 'not_found') return <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('notFound')}</p>;
-  if (state.kind === 'error') {
-    return (
-      <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-        {t('loadFailed')}
-      </p>
-    );
-  }
+  if (state.kind === 'loading') return <Spinner label={t('loading')} />;
+  if (state.kind === 'not_found') return <p className={ui.muted}>{t('notFound')}</p>;
+  if (state.kind === 'error') return <Alert tone="danger">{t('loadFailed')}</Alert>;
 
   const { appointment } = state;
   const start = new Date(appointment.startsAt);
@@ -85,38 +81,31 @@ export function AppointmentDetail({ organizationId, appointmentId }: { organizat
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-zinc-50">
-          <Link href={`/patients/${appointment.patient.id}`} className="underline">
+      <div className="space-y-2">
+        <h1 className={ui.h1}>
+          <Link href={`/patients/${appointment.patient.id}`} className="underline-offset-4 hover:underline">
             {appointment.patient.fullName}
           </Link>
         </h1>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="text-sm text-muted">
           {format.dateTimeRange(start, new Date(appointment.endsAt), { dateStyle: 'full', timeStyle: 'short' })}
         </p>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {appointment.professional.fullName ?? t('unknownProfessional')} · {t(`modality.${appointment.modality}`)} ·{' '}
-          {t(`status.${appointment.status}`)}
+        <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+          <Badge tone={APPOINTMENT_STATUS_TONE[appointment.status]}>{t(`status.${appointment.status}`)}</Badge>
+          {appointment.professional.fullName ?? t('unknownProfessional')} · {t(`modality.${appointment.modality}`)}
         </p>
-        <Link href={`/appointments?view=day&date=${toDateInput(start)}`} className="text-sm underline">
+        <Link href={`/appointments?view=day&date=${toDateInput(start)}`} className={`${ui.link} text-sm`}>
           {t('showInCalendar')}
         </Link>
       </div>
 
-      {message ? (
-        <p
-          role={message.tone === 'error' ? 'alert' : 'status'}
-          className={`text-sm ${message.tone === 'error' ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'}`}
-        >
-          {t(message.key)}
-        </p>
-      ) : null}
+      {message ? <Alert tone={message.tone === 'error' ? 'danger' : 'success'}>{t(message.key)}</Alert> : null}
 
       {cancelled ? (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('cancelledFinal')}</p>
+        <Alert tone="info">{t('cancelledFinal')}</Alert>
       ) : (
         <>
-          <div className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className={ui.card}>
             <AppointmentForm
               key={formKey}
               organizationId={organizationId}
@@ -125,19 +114,19 @@ export function AppointmentDetail({ organizationId, appointmentId }: { organizat
               onSubmit={save}
             />
           </div>
-          <div className="space-y-2 rounded border border-zinc-200 bg-white p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+          <div className={ui.card}>
             {confirmingCancel ? (
-              <span className="space-x-3">
-                <span>{t('cancelConfirm')}</span>
-                <button type="button" onClick={() => void cancelAppointment()} className="font-medium text-red-700 underline dark:text-red-400">
+              <span className="flex flex-wrap items-center gap-3 text-sm">
+                <span className="font-medium">{t('cancelConfirm')}</span>
+                <button type="button" onClick={() => void cancelAppointment()} className={ui.button.danger}>
                   {t('cancelYes')}
                 </button>
-                <button type="button" onClick={() => setConfirmingCancel(false)} className="underline">
+                <button type="button" onClick={() => setConfirmingCancel(false)} className={ui.button.ghost}>
                   {t('keep')}
                 </button>
               </span>
             ) : (
-              <button type="button" onClick={() => setConfirmingCancel(true)} className="text-red-700 underline dark:text-red-400">
+              <button type="button" onClick={() => setConfirmingCancel(true)} className={ui.button.danger}>
                 {t('cancelAppointment')}
               </button>
             )}

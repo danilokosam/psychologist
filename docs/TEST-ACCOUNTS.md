@@ -91,6 +91,14 @@ belong to yet — e.g. Mallory into Consulta Diego).
 | José Sintético Pérez (TEST) — id `44f62aef-b0f0-4982-9ec4-facaf09bc253` | Consulta Ana (TEST) | `inactive`; has been archived and restored once (browser pass 2026-11-14) |
 | Lucía Sintética Gómez (TEST) — id `b3e49c2c-3b98-4687-a41d-b77a987056c8` | Consulta Ana (TEST) | `active` (Milestone 3 browser pass) |
 
+### In Consulta Mallory (TEST) — demo data for UI work
+
+Patients Marta Ficticia Ruiz (active), Pablo Inventado Sanz (active), Irene
+Sintética Mora (inactive), each with one appointment in the week of
+2026-11-16 (confirmed / online-scheduled / scheduled). Created during the UI
+refresh to see every screen with data. Mallory is still the outsider for
+Ana's practice — this data is hers alone.
+
 ## Synthetic appointments (Milestone 3)
 
 All in Consulta Ana (TEST), Monday 2026-11-16 / Tuesday 2026-11-17 (times

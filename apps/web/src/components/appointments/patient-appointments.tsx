@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
 import { APPOINTMENTS_MAX_WINDOW_DAYS, listAppointmentsResponseSchema, type Appointment } from '@psych/types';
 import { apiFetch } from '@/lib/api-client';
+import { ui } from '@/lib/ui';
+import { APPOINTMENT_STATUS_TONE, Badge, Spinner } from '../ui/feedback';
 
 /** A patient's upcoming appointments (the next ~2 months), on the patient page. */
 export function PatientAppointments({
@@ -39,24 +41,25 @@ export function PatientAppointments({
   }, [organizationId, patientId]);
 
   return (
-    <div className="space-y-2 rounded border border-zinc-200 bg-white p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900">
+    <div className={`${ui.card} space-y-3 text-sm`}>
       <div className="flex items-center justify-between">
-        <h2 className="font-medium">{t('upcoming')}</h2>
+        <h2 className={ui.h2}>{t('upcoming')}</h2>
         {canBook ? (
-          <Link href={`/appointments/new?patientId=${patientId}`} className="underline">
-            {t('new')}
+          <Link href={`/appointments/new?patientId=${patientId}`} className={ui.button.secondary}>
+            + {t('new')}
           </Link>
         ) : null}
       </div>
-      {appointments === null ? <p className="text-zinc-600 dark:text-zinc-400">{t('loading')}</p> : null}
-      {appointments?.length === 0 ? <p className="text-zinc-600 dark:text-zinc-400">{t('noUpcoming')}</p> : null}
-      <ul className="space-y-1">
+      {appointments === null ? <Spinner label={t('loading')} /> : null}
+      {appointments?.length === 0 ? <p className="text-muted">{t('noUpcoming')}</p> : null}
+      <ul className="divide-y divide-border">
         {appointments?.map((a) => (
-          <li key={a.id}>
-            <Link href={`/appointments/${a.id}`} className="underline">
+          <li key={a.id} className="flex flex-wrap items-center gap-2 py-2">
+            <Link href={`/appointments/${a.id}`} className={ui.link}>
               {format.dateTime(new Date(a.startsAt), { dateStyle: 'medium', timeStyle: 'short' })}
-            </Link>{' '}
-            · {a.professional.fullName ?? t('unknownProfessional')} · {t(`status.${a.status}`)}
+            </Link>
+            <span className="text-muted">{a.professional.fullName ?? t('unknownProfessional')}</span>
+            <Badge tone={APPOINTMENT_STATUS_TONE[a.status]}>{t(`status.${a.status}`)}</Badge>
           </li>
         ))}
       </ul>
