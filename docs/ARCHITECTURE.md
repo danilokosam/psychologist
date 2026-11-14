@@ -7,7 +7,9 @@
 > described below is no longer only a design: `apps/api/src/modules/accounts/`
 > implements it fully (domain → ports → use cases → Prisma adapter →
 > composition root → routes) and is the reference to copy when adding
-> patients, appointments and the rest.
+> patients, appointments and the rest. `modules/organizations/`
+> (invitations, Milestone 1) is the second module and the first whose use
+> cases depend on another module's port (`AccountRepository`).
 
 ## Shape: modular monolith
 

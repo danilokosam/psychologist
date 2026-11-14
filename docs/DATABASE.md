@@ -22,8 +22,11 @@ considered sufficient.
 
 ### `profiles`
 Shadow of Supabase's `auth.users`, 1:1.
-`id (uuid, = auth.users.id) PK`, `full_name`, `phone`, `locale (varchar, default 'en')`,
+`id (uuid, = auth.users.id) PK`, `full_name`, `phone`, `locale (text, default 'en')`,
 `created_at`.
+`CHECK (locale IN ('en', 'es'))` (`profiles_locale_supported`) — the user
+writes this column via `PATCH /me` (F-013), so the database enforces the
+supported set as well as the API.
 
 ### `organizations`
 `id PK`, `name`, `slug UNIQUE`, `type enum(individual, clinic)`,
@@ -51,6 +54,32 @@ ownership-transfer or org-deletion flow rather than a silent cascade.
 `status enum(active, invited, suspended)`, `created_at`.
 **`UNIQUE (organization_id, user_id)`** — this is also the target of every
 composite FK referencing "a user within an org."
+A row can be inserted in exactly two ways (one merged `memberships_insert`
+policy): adding yourself to an organization you just created (bootstrap), or
+adding yourself, as `active`, with exactly the role of a pending unexpired
+invitation addressed to your verified email. `status = 'invited'` is unused —
+see `invitations`.
+
+### `invitations`
+An owner's offer for someone to join ([ADR-0013](decisions/0013-organization-invitations.md)).
+Separate from `memberships` because the invitee usually has no profile (no
+user id) yet.
+`id PK`, `organization_id FK → organizations ON DELETE CASCADE`,
+`email` (lower-cased, CHECK-enforced), `role` (`MembershipRole`,
+`CHECK (role <> 'owner')`), `token_hash UNIQUE` (SHA-256 hex of the link
+token — the token itself is never stored), `status enum(pending, accepted,
+revoked)`, `invited_by` → composite FK to `memberships (organization_id,
+user_id)`, `accepted_by` → composite FK to `memberships`, nullable,
+`expires_at`, `created_at`, `accepted_at`, `revoked_at`.
+`UNIQUE (id, organization_id)`. Partial unique index: one `pending`
+invitation per `(organization_id, email)`. A CHECK keeps the lifecycle
+columns consistent with `status`.
+The two composite FKs are `ON DELETE NO ACTION` rather than `RESTRICT`:
+`NO ACTION` is checked at the end of the statement, so cascading an
+organization's deletion through both `memberships` and `invitations` works,
+while removing just an inviter's membership is still refused.
+**Grants:** `app_runtime` may `UPDATE` only `status`, `accepted_by`,
+`accepted_at`, `revoked_at`, and may not `DELETE` at all.
 
 ### `patients`
 `id PK`, `organization_id FK NOT NULL`, `full_name`, `date_of_birth`,
@@ -145,12 +174,18 @@ not just writes.
   `clinical_sessions`.
 - `(organization_id, user_id)` unique on `memberships` (also the
   composite-FK target).
+- `invitations`: `(organization_id, invited_by)` and
+  `(organization_id, accepted_by)` (cover the composite FKs and serve as the
+  per-tenant index), `token_hash` unique, partial unique
+  `(organization_id, email) WHERE status = 'pending'`.
 
 ## ER overview
 
 ```mermaid
 erDiagram
   organizations ||--o{ memberships : has
+  organizations ||--o{ invitations : offers
+  memberships ||--o{ invitations : "sends / accepts"
   profiles ||--o{ memberships : has
   organizations ||--o{ patients : owns
   organizations ||--|| subscriptions : has
@@ -162,6 +197,12 @@ erDiagram
   clinical_sessions ||--o{ payments : "billed via"
 ```
 
+> **`invitations` (and the `profiles.locale` CHECK) exist in migrations
+> `20261114120000_invitations` / `20261114130000_profiles_locale_check`**
+> and are applied to the Supabase project (2026-11-14). Rollout order for
+> any future change touching both: `sql/rls-helpers.sql` first, then
+> `migrate:deploy`.
+>
 > **`profiles`, `organizations`, and `memberships` are implemented** on
 > the real Supabase project (`packages/db/prisma/migrations/`) — exactly
 > as designed above, with one deviation: the `profiles.id → auth.users.id`

@@ -40,6 +40,12 @@ synthetic, fictional records — until that review is complete (Milestone
    organization exists).
 2. Check role sufficiency for the route (e.g. `admin_staff` is blocked
    from any `clinical_notes` route before a query is even built).
+   **Implemented:** `requireRole(PERMISSIONS[action])`
+   (`apps/api/src/shared/middleware/require-role.ts`), reading the role
+   `resolveOrganization` loaded from `memberships`. A verified member with
+   an insufficient role gets **403 `FORBIDDEN`** — unlike step 1, this
+   leaks nothing, because the caller already knows the organization exists
+   and the check runs before any lookup of the specific resource.
 3. Open a Prisma transaction and set tenant **identity** context — never
    an authorization conclusion:
    ```ts
@@ -70,7 +76,11 @@ The fixed roles (`owner`, `psychologist`, `admin_staff` — see
 permissions as follows. This is the authoritative matrix — route-level
 `requireRole(...)` middleware and RLS policies must both match it; see
 [ADR-0010](decisions/0010-role-permission-matrix.md) for the full
-rationale.
+rationale. Its code form is the `PERMISSIONS` constant
+(`apps/api/src/shared/authorization/permissions.ts`); changing a row here
+means changing that constant, the matching RLS policy, and the
+independently transcribed table in `require-role.test.ts` in the same
+change — the test fails if the code and this table disagree.
 
 | Resource / action | Owner | Psychologist | Admin Staff |
 |---|---|---|---|
@@ -194,6 +204,30 @@ running code, not by review — see
 | `app_private.current_org_id()` | The organization the application *declared* (from `X-Organization-Id`) |
 | `app_private.is_active_member(org_id)` | Whether the caller is *actually* an active member — `SECURITY DEFINER`, because a policy cannot query its own table without Postgres rejecting the plan as recursive (42P17) |
 | `app_private.is_organization_creator(org_id)` | Same, for the bootstrap case |
+| `app_private.current_user_email()` | The caller's email, from the **verified** token's `email` claim (`app.current_user_email`), lower-cased. Identity, like `current_user_id()` — read only by the invitation policies ([ADR-0013](decisions/0013-organization-invitations.md)) |
+| `app_private.has_pending_invitation(org_id, role)` | Whether a pending, unexpired invitation exists for the caller's email to that organization with that role — `SECURITY DEFINER`, for the same recursion reason (the `memberships` INSERT policy reads `invitations`, whose policies read `memberships`) |
+
+`rls-helpers.sql` sets `check_function_bodies = off`, so it can — and must —
+run **before** the Prisma migrations on a fresh database: the migrations'
+policies call these functions, and the functions read the migrations'
+tables. Bodies are still checked when executed. Rollout order for any
+change touching both: `rls-helpers.sql`, then `migrate:deploy`.
+
+### Invitations — implemented ([ADR-0013](decisions/0013-organization-invitations.md))
+
+Policies in `20261114120000_invitations/migration.sql`. In short: owners of
+the declared organization (role re-derived from `memberships`) see, create
+and revoke its invitations; an invitee sees only pending invitations to
+their own verified email, plus the one they accepted (required — Postgres
+checks the *new* row of `UPDATE … RETURNING` against the SELECT policy); the
+only updates allowed are owner → `revoked` and invitee → `accepted` by
+themselves. Column grants stop `app_runtime` from changing an invitation's
+email, role, organization or token hash, and there is no DELETE grant. The
+`memberships` INSERT policy gained its second branch: join yourself, as
+`active`, with exactly the invited role, while a matching invitation is
+pending. **Deployment requirement:** Supabase "Confirm email" must be on,
+or the `email` claim isn't a verified address (the link token still
+prevents exploitation on its own).
 
 ### Organization scoping — planned, not yet implemented
 
@@ -346,14 +380,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_runti
 **Supabase's `service_role` connection string must never be used as the
 Express API's `DATABASE_URL`** — it is provisioned with RLS-bypass
 privileges by Supabase, by design, for admin tooling. The application
-should assert this at startup: fail loudly if the connected role has
-`rolbypassrls = true`. **Not yet implemented** — this assertion is
-application code in `apps/api`, which doesn't connect to the database at
-all yet (see `CLAUDE.md` current status). `app_runtime`'s password is
-generated and the role exists, but its pooled (transaction-mode, port
-6543) connection string hasn't been assembled or wired into any app code
-yet — that's part of the still-pending Supabase Auth / `withTenantContext`
-integration work.
+asserts this at startup and refuses to run if the connected role has
+`rolbypassrls` or `rolsuper` (`apps/api/src/shared/db/assert-no-bypass-rls.ts`,
+implemented in Milestone 0). The API connects as `app_runtime` through the
+transaction-mode pooler (port 6543).
 
 ## Private file storage
 
@@ -364,27 +394,46 @@ direct, unauthenticated bucket/object reference.
 
 ## Cross-tenant isolation testing strategy
 
-- **Full-stack test:** seed Org A and Org B, each with a patient. As an
-  authenticated Org A owner, `GET /patients/:orgBPatientId` → expect 404.
-- **RLS-only test:** `packages/db/scripts/verify-rls-isolation.mjs` —
-  connects as `app_runtime`, sets only the identity session variables, and
-  asserts one user cannot read, enumerate, or write into another user's
-  organization. **Implemented and passing 6/6.** Not part of `pnpm test`
-  (it needs real credentials and a live database); run it manually:
+**Implemented as an automated suite** (`apps/api/test/integration/`, run
+with `pnpm db:test:up && pnpm test:integration`, and in CI). It runs against
+a throwaway Postgres built exactly like production — `app_migrator` /
+`app_runtime` roles (both `NOBYPASSRLS`), `rls-helpers.sql`, every Prisma
+migration — with the API connected as `app_runtime`, and the **real**
+`requireAuth` verifying tokens against a JWKS endpoint the suite serves
+itself. The first test asserts the harness is not running as an
+RLS-bypassing role, since that would make every other test pass vacuously.
+
+- **Full-stack:** two organizations seeded through the real flows
+  (bootstrap + invitations; Org A holds all three roles). Every Org A member
+  gets `404` for Org B and vice versa, byte-identical to a nonexistent
+  organization (`tenant-isolation.test.ts`, `invitations.test.ts`).
+- **RLS-only:** connects as `app_runtime` with *no application code in
+  front* and sets only the identity variables, as a buggy route would. With
+  no identity, every table reads empty; an outsider claiming another
+  organization sees no organization, memberships, profiles or invitations
+  of it; nobody below `owner` can rename an organization; nobody can add
+  someone else, delete memberships/organizations/invitations, rewrite an
+  invitation's role or email, or join without a live invitation for their
+  own email and that exact role. Rejections are asserted to come from the
+  **policy** (`row-level security` / `permission denied`), not incidentally
+  from a constraint. Verified non-vacuous by mutation: removing the email
+  condition from `has_pending_invitation` makes the RLS-only suite fail
+  while the full-stack one still passes — which is exactly the two layers
+  being independent.
+- **Auth:** expired, tampered (payload altered, signature kept), unsigned
+  (`alg: none`) and wrong-issuer tokens → `401`, identical bodies, before
+  any membership lookup.
+- **Role test:** for clinical notes (Milestone 4) — as an `admin_staff`
+  member of Org A, reading a note of Org A → `403` from `requireRole` before
+  the note is looked up, and an RLS-only query returning zero rows.
+- **Manual script, still useful against the real project:**
+  `packages/db/scripts/verify-rls-isolation.mjs` runs the original 6
+  RLS-only checks against the live Supabase database (it found the
+  ADR-0012 hole the first time it ran). Re-run it after applying a
+  tenant-policy migration to Supabase:
   ```bash
   cd packages/db
   DATABASE_URL="<app_runtime url>" node scripts/verify-rls-isolation.mjs <userA> <userB> <orgOfA>
   ```
-  This is the test that actually proves defense-in-depth is working rather
-  than assumed — it found a real hole in `memberships_select` the first
-  time it ran (ADR-0012). **Re-run it whenever a tenant policy changes.**
-- **Role test:** as an `admin_staff` member of Org A, attempt to read a
-  `clinical_notes` row belonging to a patient in Org A (same org, wrong
-  role) → expect 404 at the app layer, and a direct RLS-only query to
-  return zero rows.
-- **Auth test:** invalid, expired, and tampered JWTs → rejected before
-  any membership lookup runs.
 
-> None of the above is implemented yet. This document describes the
-> required behavior; `docs/FEATURES.md` tracks the actual implementation
-> and test status per feature.
+**Every new tenant table adds its cases to both layers in the same change.**
