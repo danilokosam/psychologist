@@ -150,7 +150,7 @@ export function Calendar({
         <button type="button" onClick={() => go({ anchor: step(view, anchor, 1) })} className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700" aria-label={t('next')}>
           ›
         </button>
-        <h2 className="flex-1 font-medium capitalize">{title}</h2>
+        <h2 className="flex-1 font-medium first-letter:uppercase">{title}</h2>
         <label htmlFor="calendar-professional" className="sr-only">
           {t('professional')}
         </label>
@@ -193,7 +193,7 @@ export function Calendar({
               <button
                 type="button"
                 onClick={() => go({ view: 'day', anchor: day })}
-                className={`w-full text-left text-xs font-medium capitalize ${sameDay(day, new Date()) ? 'text-blue-700 dark:text-blue-400' : ''}`}
+                className={`w-full text-left text-xs font-medium first-letter:uppercase ${sameDay(day, new Date()) ? 'text-blue-700 dark:text-blue-400' : ''}`}
               >
                 {format.dateTime(day, { weekday: 'short', day: 'numeric' })}
               </button>
@@ -206,7 +206,7 @@ export function Calendar({
       {appointments && view === 'month' ? (
         <div className="grid grid-cols-7 gap-1 text-xs">
           {Array.from({ length: 7 }, (_, i) => addDays(from, i)).map((day) => (
-            <div key={`weekday-${day.getDay()}`} className="text-center capitalize text-zinc-500 dark:text-zinc-400">
+            <div key={`weekday-${day.getDay()}`} className="text-center first-letter:uppercase text-zinc-500 dark:text-zinc-400">
               {format.dateTime(day, { weekday: 'short' })}
             </div>
           ))}

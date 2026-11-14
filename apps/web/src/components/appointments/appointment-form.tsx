@@ -105,7 +105,9 @@ export function AppointmentForm({
     if (appointment || query.trim().length < 2) return;
     let cancelled = false;
     const timer = setTimeout(() => {
-      const params = new URLSearchParams({ q: query.trim(), pageSize: '10', status: 'active' });
+      // No status filter: the API's default working list is active AND
+      // inactive patients -- both bookable; only archived ones are not.
+      const params = new URLSearchParams({ q: query.trim(), pageSize: '10' });
       apiFetch<unknown>(`/patients?${params.toString()}`, { organizationId }).then(
         (raw) => {
           if (!cancelled) setMatches(listPatientsResponseSchema.parse(raw).patients);

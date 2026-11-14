@@ -173,7 +173,7 @@
     "patient": "Patient",
     "changePatient": "Change",
     "searchPatient": "Search a patient by name, email or phone",
-    "noPatientMatches": "No active patient matches.",
+    "noPatientMatches": "No patient matches (archived patients cannot be booked).",
     "date": "Date",
     "time": "Start",
     "duration": "Duration",

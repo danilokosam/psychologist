@@ -173,7 +173,7 @@
     "patient": "Paciente",
     "changePatient": "Cambiar",
     "searchPatient": "Busca un paciente por nombre, email o teléfono",
-    "noPatientMatches": "Ningún paciente activo coincide.",
+    "noPatientMatches": "Ningún paciente coincide (los archivados no se pueden citar).",
     "date": "Fecha",
     "time": "Hora de inicio",
     "duration": "Duración",
