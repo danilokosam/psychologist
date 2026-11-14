@@ -1,0 +1,21 @@
+# Throwaway Postgres for the API's integration tests (`pnpm test:integration`).
+#
+# Safe by construction: bound to 127.0.0.1 only, data on tmpfs (gone when the
+# container stops), test-only credentials, and only synthetic data is ever
+# written to it. It never talks to the real Supabase project.
+#
+# Same major version as the Supabase project (supabase/config.toml).
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '127.0.0.1:54329:5432'
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 1s
+      timeout: 3s
+      retries: 30

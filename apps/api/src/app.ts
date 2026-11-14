@@ -2,6 +2,7 @@ import cors from 'cors';
 import express from 'express';
 import { healthRouter } from './routes/health';
 import { accountsRouter } from './modules/accounts/delivery/http/accounts.routes';
+import { invitationsRouter } from './modules/organizations/delivery/http/invitations.routes';
 import { errorHandler } from './shared/middleware/error-handler';
 
 // Exported separately from server.ts so tests can exercise the app with
@@ -16,6 +17,7 @@ export function createApp() {
 
   app.use(healthRouter);
   app.use(accountsRouter);
+  app.use(invitationsRouter);
 
   // Must be registered after all routes.
   app.use(errorHandler);

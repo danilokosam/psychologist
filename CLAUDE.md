@@ -65,7 +65,7 @@ Full feature-by-feature detail and current status: **`docs/FEATURES.md`**.
 ```
 /apps/web      Next.js frontend (App Router, Tailwind, next-intl)
 /apps/api      Express backend -- src/{app.ts,server.ts,env.ts,middleware/,routes/}
-/packages/db   Prisma -- schema only so far, no models yet (see note below)
+/packages/db   Prisma schema + migrations, sql/ (privileged scripts), RLS script
 /packages/types  Shared Zod schemas (frontend + backend contracts)
 /packages/config shared eslint/tsconfig
 /docs          this documentation set
@@ -90,11 +90,15 @@ category of hand-run SQL, applied with the privileged connection
 `app_migrator` structurally cannot do:
 - `profiles-auth-fk.sql` — the FK into Supabase's `auth.users` ([ADR-0011](docs/decisions/0011-profiles-auth-fk-via-privileged-connection.md))
 - `rls-helpers.sql` — the `app_private` identity/membership helpers every
-  policy uses, which must be owned by an RLS-bypassing role ([ADR-0012](docs/decisions/0012-rls-gates-on-verified-membership.md))
+  policy uses, which must be owned by an RLS-bypassing role ([ADR-0012](docs/decisions/0012-rls-gates-on-verified-membership.md)).
+  **Run it before `migrate:deploy`** (it sets `check_function_bodies = off`
+  for exactly that reason).
+- `local-test-roles.sql` — creates `app_migrator`/`app_runtime` on the
+  throwaway test Postgres only. Never run it against Supabase.
 
 Don't fold `sql/` scripts into Prisma migrations; don't re-attempt granting
 a custom role access to `auth` — it's a platform restriction, not a
-privilege you're missing. Both files are idempotent; re-running them is safe.
+privilege you're missing. All three files are idempotent; re-running them is safe.
 
 **Writing a policy for a new tenant table?** Read the "Identity helpers"
 section of `docs/SECURITY.md` first. Never cast `current_setting(...)`
@@ -129,7 +133,8 @@ bugs that already happened once.
   AND PostgreSQL RLS, both independently enforced — never remove one
   because "the other already covers it."
 - **Session variables carry identity only** (`app.current_user_id`,
-  `app.current_org_id`), never an authorization conclusion. Sensitive
+  `app.current_org_id`, and `app.current_user_email` from the verified
+  token), never an authorization conclusion. Sensitive
   policies (clinical notes) re-derive role fresh from `memberships`
   inside the policy. See
   [ADR-0003](docs/decisions/0003-defense-in-depth-tenant-isolation.md).
@@ -231,11 +236,33 @@ tests, Playwright for a small number of critical E2E flows.
 
 ## Current milestone and status
 
-**Milestone 0 is COMPLETE. Milestone 1 (Organizations & Membership +
-RBAC) is next and has not been started.**
+**Milestones 0 and 1 are COMPLETE.** Milestone 1 (F-004 `requireRole`,
+F-003 invitations + org switcher, F-013 language) is applied to Supabase and
+verified in the browser against the real project. **Milestone 2 (Patients)
+is next and has not been started** — but first look at the "Found, not
+fixed" list under Milestone 1 in `docs/ROADMAP.md` (notably:
+the `rls_auto_enable` advisor warning). Track per-feature status
+in `docs/FEATURES.md`, not here.
+
+Every org-scoped route is `requireAuth → resolveOrganization →
+requireRole(PERMISSIONS['<action>'])`. Never pass `requireRole` a
+hand-typed role list — add or reuse an entry in
+`apps/api/src/shared/authorization/permissions.ts` (the code form of the
+`SECURITY.md` matrix).
 
 What exists and is verified end to end:
-- pnpm monorepo, shared TS/ESLint config, GitHub Actions CI, 14 passing tests.
+- pnpm monorepo, shared TS/ESLint config, GitHub Actions CI: 72 unit tests
+  (`pnpm test`) + 57 integration tests (`pnpm db:test:up && pnpm test:integration`).
+- **Integration harness** (`apps/api/test/integration/`): throwaway Postgres
+  17 in Docker (`docker-compose.test.yml`, 127.0.0.1 only, tmpfs), built like
+  production — roles, `rls-helpers.sql`, every migration — with the API as
+  `app_runtime` and the real `requireAuth` verifying tokens against a JWKS
+  the suite serves itself. Use `adminDb` only for fixtures/assertions;
+  behaviour under test goes through the API or `asIdentity` (RLS-only).
+  **Every new tenant table adds full-stack and RLS-only cases here.**
+- **Invitations** ([ADR-0013](docs/decisions/0013-organization-invitations.md)):
+  hashed one-time link token in the URL fragment, bound to the invitee's
+  verified email; `app.current_user_email` is the third identity variable.
 - Real Supabase project ("psychologist", `eu-central-1`, ref
   `eddhihxizeeanysekuzs`), linked via `supabase link`.
 - `app_migrator` / `app_runtime` roles, both confirmed `NOBYPASSRLS` and
@@ -250,16 +277,24 @@ What exists and is verified end to end:
 - `withTenantContext` / `withUserContext`, the `BYPASSRLS` startup
   assertion, and `modules/accounts/` as the worked ports-and-adapters
   reference (ADR-0009).
-- RLS-only isolation test passing 6/6
-  (`packages/db/scripts/verify-rls-isolation.mjs`).
+- RLS-only isolation test passing 6/6 against the live database
+  (`packages/db/scripts/verify-rls-isolation.mjs`, last run after the M1
+  rollout).
+- **Synthetic test accounts** in the Supabase project, one per role plus a
+  multi-org user and an outsider: `docs/TEST-ACCOUNTS.md` (password in the
+  gitignored `.env.test-accounts`). Use them for any manual/browser test;
+  never attach real data to them; delete them before Milestone 6.
+- Read-then-write account operations (bootstrap, accepting an invitation)
+  take a per-user transaction-scoped advisory lock (`lockAccount`) first —
+  copy that pattern for any future "create if missing" flow.
 
 What does **not** exist: patients, appointments, clinical sessions,
-clinical notes, payments, dashboard metrics, the invite flow, role-gated
-routes (`requireRole`), password recovery UI, and any deployment. Full
+clinical notes, payments, dashboard metrics, password recovery UI, membership
+removal/role changes, email delivery of invitations, and any deployment. Full
 detail: `docs/ROADMAP.md`. **Work proceeds feature by feature, within one
 milestone at a time — do not jump ahead to a later milestone's features.**
 
-Three platform constraints were discovered empirically and are documented
+Four platform constraints were discovered empirically and are documented
 because they will bite again:
 1. Custom roles cannot be granted any privilege on Supabase's `auth`
    schema — [ADR-0011](docs/decisions/0011-profiles-auth-fk-via-privileged-connection.md).
@@ -267,6 +302,12 @@ because they will bite again:
    `current_setting(name, true)` returns `''` — not NULL — on a reused
    pooled connection — [ADR-0012](docs/decisions/0012-rls-gates-on-verified-membership.md).
 3. `postgres` has `rolbypassrls = true`; `app_runtime` must never be it.
+4. Prisma's `update()`/`create()` issue `… RETURNING`, and Postgres requires
+   the **new** row to pass the table's SELECT policy too. A write that moves
+   a row out of the caller's visibility (e.g. an invitation leaving
+   `pending`) fails unless the SELECT policy also covers the post-write
+   state — or use `updateMany`, which has no `RETURNING`. See the
+   `invitations_select` comment in its migration.
 
 ## Locked architectural decisions — do not change without discussion first
 
@@ -283,6 +324,7 @@ because they will bite again:
 11. Any schema change touching Supabase's `auth` (or `storage`/`realtime`) schema goes through a privileged-connection script in `packages/db/sql/`, never a Prisma migration — custom roles cannot be granted access to those schemas. See [ADR-0011](docs/decisions/0011-profiles-auth-fk-via-privileged-connection.md).
 12. Tenant policies gate on `app_private.is_active_member(...)` (verified by the database) **and** the declared organization — never the declared organization alone. Identity is always read via the `app_private` helpers, never by casting `current_setting(...)` inline. See [ADR-0012](docs/decisions/0012-rls-gates-on-verified-membership.md).
 13. **No real patient data before the Milestone 6 legal/DPO review is complete**, and no part of this system should be described as making the product "GDPR-compliant" outright.
+14. Invitations require **both** the one-time link token (stored only as a hash, carried in the URL fragment) **and** the invitee's verified email; `owner` is never invitable; invitations are revoked, never deleted. See [ADR-0013](docs/decisions/0013-organization-invitations.md).
 
 Full rationale and alternatives considered for each: `docs/decisions/`.
 

@@ -61,5 +61,9 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
     );
   }
 
+  // 204 No Content (e.g. revoking an invitation) has no body to parse.
+  if (response.status === 204) {
+    return undefined as T;
+  }
   return (await response.json()) as T;
 }

@@ -21,6 +21,7 @@ suggestion. See `docs/ROADMAP.md` Milestone 6.
 |---|---|---|---|---|---|
 | `profiles.full_name`, `.phone` | Personal | Identify the professional/staff user | TBD — legal/DPO | TBD | Tied to account lifecycle |
 | `profiles.locale` | Internal (preference) | UI language | N/A | Account lifetime | Not personal/sensitive data |
+| `invitations.email` | Personal | Address a team invitation to a specific person, and bind acceptance to that person's verified email ([ADR-0013](decisions/0013-organization-invitations.md)) | TBD — likely legitimate interest / contract with the inviting practice | TBD — accepted and revoked rows are kept as an audit trail of who was granted access by whom; whether to purge or pseudonymize them after a period is an open question for the legal review | Only the invitee's address and the role offered; the link token is never stored (hash only). The invitee has not yet consented to anything when the row is created. |
 | `patients.full_name`, `.phone`, `.email` | Personal | Identify and contact the patient | TBD — Art. 6, pending confirmation of basis | TBD — pending retention-period research (see open question below) | Minimum needed to run a practice |
 | `patients.date_of_birth` | Personal | Clinical context | TBD | TBD | Kept — relevant to clinical practice |
 | `patients.emergency_contact_*` | Personal (optional) | Safety in a crisis | TBD | TBD | Optional field, justified by patient safety |

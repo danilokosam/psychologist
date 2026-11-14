@@ -52,7 +52,15 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
       throw new AppError(401, 'Token has no subject', 'UNAUTHENTICATED');
     }
 
-    req.auth = { userId: payload.sub };
+    // The email claim is carried as identity (never as authorization), for
+    // the one flow that needs it: accepting an invitation addressed to this
+    // address (ADR-0013). Only trustworthy because Supabase verifies the
+    // address before issuing a session (a deployment requirement recorded in
+    // that ADR).
+    const email =
+      typeof payload.email === 'string' && payload.email ? payload.email.trim().toLowerCase() : undefined;
+
+    req.auth = { userId: payload.sub, ...(email ? { email } : {}) };
     next();
   } catch (error) {
     // Any verification failure -- bad signature, expired, wrong issuer,

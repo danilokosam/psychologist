@@ -26,6 +26,10 @@ export async function bootstrapAccount(
   input: BootstrapAccountInput,
   deps: { accounts: AccountRepository },
 ): Promise<Account> {
+  // Read-then-write below; without this, two simultaneous first sign-ins
+  // (two tabs, or React Strict Mode in development) both see "nothing yet".
+  await deps.accounts.lockAccount(input.userId);
+
   const existingProfile = await deps.accounts.findProfile(input.userId);
   const profile =
     existingProfile ??

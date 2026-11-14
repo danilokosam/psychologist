@@ -5,7 +5,9 @@ psychology practices manage patients, appointments, clinical sessions,
 clinical notes, and payments in one place, instead of spreadsheets,
 calendars, and messaging apps.
 
-> **Project status:** Milestone 0 complete — monorepo and tooling, a real
+> **Project status:** Milestone 1 complete (organizations, invitations,
+> roles, language preference) — applied to Supabase and verified in the
+> browser. Milestone 0 complete — monorepo and tooling, a real
 > Supabase project (EU), the `profiles`/`organizations`/`memberships`
 > schema with Row Level Security verified by an RLS-only isolation test,
 > Supabase Auth wired end to end, and an empty dashboard behind a real
@@ -45,6 +47,7 @@ and [`docs/decisions/`](docs/decisions/) (ADRs).
 | [`docs/DATA-INVENTORY.md`](docs/DATA-INVENTORY.md) | Personal/special-category data inventory, privacy notes |
 | [`docs/FEATURES.md`](docs/FEATURES.md) | Feature-by-feature implementation and verification tracker |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Milestones and progress |
+| [`docs/TEST-ACCOUNTS.md`](docs/TEST-ACCOUNTS.md) | Synthetic accounts in the Supabase project for manual testing (one per role, multi-org, outsider) |
 | [`docs/decisions/`](docs/decisions/) | Architecture Decision Records (ADRs) |
 
 ## Project structure
@@ -72,7 +75,8 @@ modules/accounts/
   delivery/http/       Express routes
 composition/container.ts   the only file allowed to import an adapter
 shared/db/            prisma client, withTenantContext, BYPASSRLS assertion
-shared/middleware/    requireAuth, resolveOrganization, error handler
+shared/middleware/    requireAuth, resolveOrganization, requireRole, error handler
+shared/authorization/ PERMISSIONS -- the role matrix from docs/SECURITY.md, as code
 ```
 `apps/web` never imports `packages/db` or talks to Postgres directly — it
 only calls `apps/api` over HTTP.
@@ -133,12 +137,28 @@ privileged connection, e.g.:
 
 ```bash
 supabase db query --remote --yes --file packages/db/sql/rls-helpers.sql
+pnpm --filter @psych/db run migrate:deploy   # always AFTER rls-helpers.sql
 ```
 
 See [ADR-0011](docs/decisions/0011-profiles-auth-fk-via-privileged-connection.md)
 and [ADR-0012](docs/decisions/0012-rls-gates-on-verified-membership.md) for why.
 
-### Verifying tenant isolation
+### Integration tests (real Postgres, real RLS)
+
+```bash
+pnpm db:test:up          # throwaway Postgres 17 on 127.0.0.1:54329 (tmpfs, test-only credentials)
+pnpm test:integration    # rebuilds the test database from scratch, then runs the suite
+pnpm db:test:down
+```
+
+The suite recreates production's privilege model (`app_migrator` /
+`app_runtime`, both `NOBYPASSRLS`), applies `rls-helpers.sql` and every
+migration, connects the API as `app_runtime`, and verifies tokens with the
+real `requireAuth` against a JWKS endpoint it serves itself. It proves
+tenant isolation at both layers: through the API, and with the application
+removed (RLS only). It never touches the Supabase project. CI runs it too.
+
+### Verifying tenant isolation on the real project
 
 ```bash
 cd packages/db

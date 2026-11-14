@@ -12,6 +12,9 @@
     "build": "pnpm run build:packages && pnpm --filter \"./apps/*\" run build",
     "lint": "pnpm -r run lint",
     "typecheck": "pnpm run build:packages && pnpm -r run typecheck",
-    "test": "pnpm run build:packages && pnpm -r run test"
+    "test": "pnpm run build:packages && pnpm -r run test",
+    "db:test:up": "docker compose -f docker-compose.test.yml up -d --wait",
+    "db:test:down": "docker compose -f docker-compose.test.yml down",
+    "test:integration": "pnpm run build:packages && pnpm --filter @psych/api run test:integration"
   }
 }

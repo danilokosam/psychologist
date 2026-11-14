@@ -49,3 +49,13 @@ export const accountResponseSchema = z.object({
   memberships: z.array(membershipSchema),
 });
 export type AccountResponse = z.infer<typeof accountResponseSchema>;
+
+// PATCH /me. `.strict()` so a client can't smuggle extra fields (an `id`, say)
+// that some future handler might be tempted to read: unknown keys are a 400.
+// Whose profile is updated comes only from the verified token.
+export const updateProfileRequestSchema = z
+  .object({
+    locale: supportedLocaleSchema,
+  })
+  .strict();
+export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

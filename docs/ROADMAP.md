@@ -57,10 +57,39 @@ staging.** No Vercel/hosting setup exists yet — tracked as the first task
 of whichever milestone we decide to deploy in.
 
 ### Milestone 1 — Organizations & Membership + RBAC
-**Status: NOT STARTED**
-- Invite flow, active-organization switcher, role-enforcement middleware.
-- Language switcher in user settings, persisting `profiles.locale`.
-- **DoD:** two seeded orgs; full cross-tenant isolation integration tests passing (app layer *and* RLS-only, per `docs/SECURITY.md`).
+**Status: COMPLETED** (2026-11-14) — code, automated tests, rollout to
+Supabase and a browser pass against the real project.
+- [x] Role-enforcement middleware — `requireRole` + the `PERMISSIONS` matrix (F-004).
+- [x] Integration-test harness: throwaway Postgres in Docker (`docker-compose.test.yml`), production-shaped roles/RLS, real token verification against a local JWKS; also runs in CI.
+- [x] Invite flow (F-003) — pulled forward from Extended MVP by product decision; why and how in [ADR-0013](decisions/0013-organization-invitations.md).
+- [x] Language switcher persisting `profiles.locale` (F-013).
+- [x] Active-organization switcher (F-003).
+
+**DoD:** two seeded orgs; full cross-tenant isolation integration tests
+passing (app layer *and* RLS-only, per `docs/SECURITY.md`). **Met by the
+automated suite** — 55 integration tests (`apps/api/test/integration/`),
+two organizations seeded through the real bootstrap and invitation flows,
+every role present; plus 72 unit tests. Now 57 integration tests (a
+bootstrap-concurrency regression test was added during the browser pass).
+
+Closing steps, done:
+- [x] Applied to Supabase in order: `rls-helpers.sql` (privileged), then `migrate:deploy` (2 migrations). Verified remotely: RLS enabled + forced on all 4 tables, `app_runtime` has no DELETE and may UPDATE only `status`/`accepted_by`/`accepted_at`/`revoked_at` on `invitations`. `verify-rls-isolation.mjs` 6/6 against the live database.
+- [x] "Confirm email" is on (`mailer_autoconfirm: false` from the project's public Auth settings) — ADR-0013's requirement holds.
+- [x] Browser pass with synthetic `@example.test` accounts (pre-confirmed via SQL so no confirmation emails were sent to non-existent addresses): see F-003 / F-013 in `docs/FEATURES.md`. It found and fixed three defects, including a real race in `/auth/bootstrap`.
+
+Also fixed while closing: **Tailwind styles were never applied** (dev or
+production) — `@tailwindcss/turbopack` had been installed in Milestone 0 but
+never registered as a Turbopack loader in `next.config.ts`. Registered; the
+shipped CSS now contains the utilities and the warning is gone.
+
+Synthetic test accounts covering every role and the cross-tenant cases were
+kept in the Supabase project on purpose: `docs/TEST-ACCOUNTS.md`.
+
+Found, not fixed (outside this milestone — next candidates):
+- `supabase db advisors`: `public.rls_auto_enable()` (Supabase's `ensure_rls` event trigger function, not from this repo) is `SECURITY DEFINER` and executable by `anon`/`authenticated`. Low risk — an event-trigger function cannot be invoked directly — but worth revoking `EXECUTE` deliberately.
+- The UI never asks for a full name, so "Signed in as" shows "—" for real sign-ups (the test accounts have names set by SQL).
+
+
 
 ### Milestone 2 — Patients
 **Status: NOT STARTED**
@@ -85,6 +114,8 @@ of whichever milestone we decide to deploy in.
 ### Milestone 6 — Hardening & beta prep
 **Status: NOT STARTED**
 - Rate limiting, error monitoring (Sentry), backup verification, privacy policy + DPA template, security review, DPIA completed, legal/DPO review of `docs/DATA-INVENTORY.md`.
+- Verify Supabase Auth "Confirm email" is enforced in production (ADR-0013's email binding relies on it).
+- **Delete the synthetic `@example.test` test accounts** (`docs/TEST-ACCOUNTS.md`) and their organizations before any real data is admitted — they share a documented password.
 - **DoD:** ready to onboard pilot psychologists under a signed beta agreement. **Real patient data is permitted only after this milestone's legal review is complete** — synthetic data only until then.
 
 ### Post-MVP (sequence by real customer feedback, not by this order)

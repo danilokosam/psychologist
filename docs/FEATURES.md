@@ -41,10 +41,21 @@ with a richer version deferred to Extended MVP — noted per feature.
   verification failures return an identical 401.
 - **Tests:** 5 automated tests cover rejection of missing/non-bearer/empty/
   malformed tokens and that failures are indistinguishable
-  (`require-auth.test.ts`). **Caveat:** the happy path (real sign-up →
-  real token → API) is verified by a documented manual procedure, not by
-  CI, because it needs live Supabase credentials. Worth revisiting if we
-  add a CI test project.
+  (`require-auth.test.ts`). Since Milestone 1 the integration suite also
+  runs the real `requireAuth` end to end against a JWKS endpoint it serves
+  itself: valid token accepted; expired, tampered (payload altered,
+  signature kept), unsigned (`alg: none`) and wrong-issuer tokens rejected
+  (`tenant-isolation.test.ts`). The one thing still verified only manually
+  is Supabase's own sign-up/sign-in (it needs the live project).
+- **Fixed in Milestone 1:** `POST /auth/bootstrap` was not safe under
+  concurrency — two simultaneous first sign-ins (two tabs, or React Strict
+  Mode in development) both read "no profile yet", so one failed with a 500
+  and, in the profile-exists-but-no-membership case, both would have created
+  a practice. Found in the browser against the real project (the latency
+  made the overlap happen); now serialized per user with a
+  transaction-scoped advisory lock (`lockAccount`), and covered by a
+  deterministic regression test (`bootstrap-concurrency.test.ts`) that
+  failed before the fix.
 
 ### F-002 — Password Recovery
 **Milestone:** 0 · **Status:** NOT STARTED
@@ -56,33 +67,73 @@ with a richer version deferred to Extended MVP — noted per feature.
 - **Required tests:** reset flow end to end; expired token rejected.
 
 ### F-003 — Organization Creation & Membership
-**Milestone:** 0–1 · **Status:** IN PROGRESS · **Scope tier:** Core MVP (solo-practice shape only)
-- **Done:** signing up auto-creates an organization with the creator as
-  `owner`, idempotently (`POST /auth/bootstrap`, `modules/accounts/`). The
-  data model and `X-Organization-Id` already support belonging to several
-  organizations.
-- **Remaining:** no UI to switch the active organization, and no tests for
-  multi-org membership or duplicate-membership rejection. Those finish this
-  feature in Milestone 1.
+**Milestone:** 0–1 · **Status:** COMPLETED · **Scope tier:** Core MVP — **including the invite flow, pulled forward from Extended MVP on 2026-11-14** ([ADR-0013](decisions/0013-organization-invitations.md) records why)
 - **Purpose:** Create an organization and manage who belongs to it.
 - **Acceptance criteria (Core MVP):** Signing up auto-creates an
   organization with the creator as `owner`; a user can belong to
-  multiple organizations and switch the active one. **The invite flow
-  (adding a second `psychologist`/`admin_staff` member) is Extended MVP**
-  — not required for a solo-practice pilot.
-- **Modules/files:** TBD.
-- **Key decisions:** [ADR-0005](decisions/0005-enum-based-roles-for-mvp.md).
+  multiple organizations and switch the active one; an `owner` can invite
+  a `psychologist` or `admin_staff` by email, and only the invited address,
+  holding the link, can join — with exactly the invited role.
+- **Done:**
+  - Bootstrap: signing up auto-creates a solo practice with the creator as
+    `owner`, idempotently (`POST /auth/bootstrap`, `modules/accounts/`).
+  - Active-organization switcher on the dashboard (shown when the user has
+    more than one active membership). The choice is a `localStorage`
+    preference only; the API re-verifies membership on every request and
+    the role shown comes from that verification, not from the cached list.
+  - Invitations (`modules/organizations/`): create / list / revoke (owner
+    only, `organization.manage`) and accept (`POST /invitations/accept`).
+    One-time link token in the URL fragment, only its SHA-256 hash stored,
+    7-day expiry, bound to the invitee's verified email; enforced
+    independently by RLS, column-level grants and CHECK constraints. UI: a
+    "Team" panel for owners and `/invitations/accept`.
+- **Verified on the real project (2026-11-14):** migrations applied to
+  Supabase; browser pass with synthetic `@example.test` accounts against the
+  real Auth + database: owner invites a psychologist, an admin_staff and a
+  second owner-of-their-own-practice; a duplicate (different case) is
+  refused; a revoked link and a leaked link used by another account both
+  get the generic "not valid" message and write nothing; the invitee joins
+  with exactly the invited role, without a spurious solo practice; a
+  psychologist/admin_staff sees no Team panel and gets 403 from the API;
+  the multi-org user switches organizations and the role and Team panel
+  follow the server-verified membership. Only the token hash is stored
+  (checked in the database). Three defects were found by this pass and
+  fixed: a bootstrap race (below), a second link opened in the same tab
+  being ignored, and identical "My practice" entries in the switcher (now
+  "name — role").
+- **Modules/files:** `apps/api/src/modules/organizations/`,
+  `apps/web/src/components/{account-panel,invitations-panel,accept-invitation}.tsx`,
+  `apps/web/src/app/invitations/accept/page.tsx`,
+  `packages/db/prisma/migrations/20261114120000_invitations/`.
+- **Key decisions:** [ADR-0005](decisions/0005-enum-based-roles-for-mvp.md),
+  [ADR-0013](decisions/0013-organization-invitations.md).
 - **Security considerations:** `UNIQUE(organization_id, user_id)`; invite
-  acceptance (once built) validated server-side, not trusted from the client.
-- **Required tests:** multi-org membership; duplicate-membership rejected.
+  acceptance validated server-side (token hash + verified email), never
+  trusted from the client; every acceptance failure is the same 404;
+  inviting an `owner` is impossible (API + CHECK). **Deployment
+  requirement:** Supabase "Confirm email" must be on (ADR-0013).
+- **Tests:** unit — `invitations.test.ts` (12, use cases with in-memory
+  fakes). Integration (real Postgres) — `invitations.test.ts` (19: full
+  stack + RLS-only, incl. leaked link, single use, expiry, revocation,
+  role escalation, column grants, no DELETE), `tenant-isolation.test.ts`
+  (multi-org membership and role switching; duplicate membership rejected
+  by the DB directly; suspended member loses access).
 
 ### F-004 — Role-Based Access Control Middleware
-**Milestone:** 1 · **Status:** IN PROGRESS · **Scope tier:** Core MVP (mechanism); exercised with all three roles starting in Extended MVP
+**Milestone:** 1 · **Status:** COMPLETED · **Scope tier:** Core MVP (mechanism); exercised with all three roles starting in Extended MVP
 - **Done:** `resolveOrganization` verifies an active membership for the
   requested organization and attaches the caller's role to the request
-  (404, never 403, on a non-membership).
-- **Remaining:** `requireRole(...)` route gating per the permission matrix,
-  and the role × route test matrix.
+  (404, never 403, on a non-membership). `requireRole(PERMISSIONS[action])`
+  then gates the route on that DB-verified role, responding `403 FORBIDDEN`
+  before the handler (and so before any query for the resource) runs. The
+  matrix from `docs/SECURITY.md` lives once in code as the static
+  `PERMISSIONS` constant — not an RBAC engine (ADR-0005). Applied to
+  `GET /organizations/current` (`organization.read`).
+- **Scope note:** the author-only clinical-note edit rule is a
+  *resource-level* rule (it depends on the note's `author_id`, not the
+  caller's role), so it cannot be decided by this middleware; it is
+  enforced and tested under F-009. Each future route's allowed/denied role
+  cases are tested as part of that route's own feature.
 - **Purpose:** Uniformly enforce the role permission matrix on every route.
 - **Acceptance criteria:** A route declares its required role(s) per
   the permission matrix in `docs/SECURITY.md`
@@ -90,13 +141,20 @@ with a richer version deferred to Extended MVP — noted per feature.
   without that role is rejected before any DB query for the resource
   runs. The mechanism must be correct for all three roles even though
   Core MVP pilots (solo practices) will only ever exercise `owner`.
-- **Modules/files:** TBD.
+- **Modules/files:** `apps/api/src/shared/authorization/permissions.ts`,
+  `apps/api/src/shared/middleware/require-role.ts`.
 - **Security considerations:** this is the first authorization gate;
   RLS is the independent second gate — see
   [ADR-0003](decisions/0003-defense-in-depth-tenant-isolation.md).
-- **Required tests:** every role × every protected route, both allowed
-  and denied cases — including the clinical-notes author-only-edit rule
-  and the clinical-sessions read/write split from the permission matrix.
+- **Tests:** `require-role.test.ts` (46 tests) — every role × every action
+  in the matrix, allowed and denied, asserting the handler never runs on a
+  denial; the clinical-sessions read/write split and `admin_staff`'s total
+  exclusion from clinical notes are both covered. The expected table is
+  transcribed independently from `docs/SECURITY.md` rather than read from
+  `PERMISSIONS`, so editing one without the other fails the suite
+  (verified by mutating `payments.refund` → 2 failures). Also: a route
+  missing `resolveOrganization` fails with 500 instead of falling through,
+  and an empty role list is refused at startup.
 
 ### F-005 — Patient Management (CRUD)
 **Milestone:** 2 · **Status:** NOT STARTED · **Scope tier:** Core MVP
@@ -165,7 +223,10 @@ with a richer version deferred to Extended MVP — noted per feature.
   removed, to prove RLS alone blocks both `admin_staff` and a
   non-author psychologist's edit attempt.
 - **Required tests:** the RLS-only `admin_staff`-blocked test; the
-  RLS-only non-author-edit-blocked test; audit log entry per read/write.
+  RLS-only non-author-edit-blocked test; an application-layer
+  non-author-edit-rejected test (the author-only rule is resource-level, so
+  it lives here rather than in F-004's role middleware); audit log entry
+  per read/write.
 
 ### F-010 — Payment Ledger
 **Milestone:** 5 · **Status:** NOT STARTED · **Scope tier:** Core MVP (minimal); refunds and revenue summaries are Extended MVP
@@ -197,7 +258,7 @@ with a richer version deferred to Extended MVP — noted per feature.
   correctly scoped to the acting user's organization.
 
 ### F-013 — Language Preference (persisted)
-**Milestone:** 1 · **Status:** NOT STARTED · **Scope tier:** Core MVP (simple toggle, persisted); a dedicated, fuller settings page is Extended MVP
+**Milestone:** 1 · **Status:** COMPLETED · **Scope tier:** Core MVP (simple toggle, persisted); a dedicated, fuller settings page is Extended MVP
 - **Purpose:** Let a user switch between English and Spanish, persisted
   to their profile so it follows them across devices — not deferred,
   even though a polished settings page can wait.
@@ -207,13 +268,33 @@ with a richer version deferred to Extended MVP — noted per feature.
   preference applies on next login from any device. **The richer
   settings-page experience (language as one section among several
   account preferences) is Extended MVP.**
+- **Done:** `PATCH /me` (`.strict()` body `{ locale }`, own profile only);
+  `profiles_locale_supported` CHECK constraint; a language selector in the
+  root layout header (every page); resolution order profile → cookie →
+  `Accept-Language` → `en`. The profile step is applied client-side: after
+  sign-in the dashboard copies `profiles.locale` into the `NEXT_LOCALE`
+  cookie, so the server only reads the cookie (no API call per render).
+- **Verified on the real project (2026-11-14):** migrations applied to
+  Supabase; browser pass with synthetic `@example.test` accounts against the
+  real Auth + database: switching to Spanish while signed in updates the
+  UI at once and persists `profiles.locale = 'es'`; a fresh browser (no
+  cookie, `Accept-Language: en-US`) comes up in English and switches to
+  Spanish on sign-in; a different user whose profile says `en` gets
+  English in the same browser (profile outranks cookie).
+- **Modules/files:** `apps/api/src/modules/accounts/application/use-cases/update-locale.ts`,
+  `apps/web/src/components/locale-switcher.tsx`, `apps/web/src/i18n/request.ts`,
+  `apps/web/src/lib/locale.ts`.
 - **Key decisions:** [ADR-0007](decisions/0007-english-first-i18n.md).
-- **Security considerations:** standard input validation (locale must be
-  one of the supported set); update restricted to the authenticated
-  user's own profile.
-- **Required tests:** switch persists across a simulated new session;
-  unsupported locale value rejected; a user cannot update another
-  user's `profiles.locale`.
+- **Security considerations:** locale validated against the supported set
+  by Zod **and** a DB CHECK; the updated profile is always the token
+  subject's, re-checked by the `profiles_self_update` policy.
+- **Tests:** `locale.test.ts` (8, integration) — persists across a new
+  session (fresh token); unsupported / missing / extra-field bodies → 400
+  with nothing written; un-bootstrapped caller → 404; RLS-only: one user
+  cannot change another's locale; the DB rejects `fr` even from a
+  privileged connection. `Accept-Language` parsing and the cookie/header
+  precedence checked by a server-render smoke test (not automated — the
+  web app has no test runner yet).
 
 ---
 

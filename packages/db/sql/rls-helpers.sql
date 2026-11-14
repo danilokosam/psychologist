@@ -5,6 +5,16 @@
 -- app_migrator and app_runtime are deliberately NOBYPASSRLS. `postgres` has
 -- rolbypassrls = true.
 
+-- Policies (created by Prisma migrations) call these functions, and these
+-- functions read tables (also created by Prisma migrations) -- so on a fresh
+-- database neither order works with default settings. Turning off body
+-- validation lets this script run FIRST: the functions are created now and
+-- their bodies are resolved when first executed. Bodies are still fully
+-- checked at execution time; nothing is weakened. This is what makes a
+-- from-scratch rebuild (and the integration-test database) reproducible:
+--   1. rls-helpers.sql  2. prisma migrate deploy  3. profiles-auth-fk.sql
+SET check_function_bodies = off;
+
 CREATE SCHEMA IF NOT EXISTS app_private;
 REVOKE ALL ON SCHEMA app_private FROM PUBLIC;
 GRANT USAGE ON SCHEMA app_private TO app_runtime, app_migrator;
@@ -135,3 +145,54 @@ $$;
 
 REVOKE ALL ON FUNCTION app_private.is_active_member(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app_private.is_active_member(uuid) TO app_runtime, app_migrator;
+
+-- ---------------------------------------------------------------------------
+-- Invitations (ADR-0013).
+--
+-- current_user_email(): the caller's email, taken by the API from the
+-- VERIFIED access token's `email` claim and set as `app.current_user_email` --
+-- identity, exactly like current_user_id(), never an authorization
+-- conclusion. Lower-cased here so comparisons match the normalized
+-- invitations.email column. Same nullif('') reasoning as above.
+--
+-- has_pending_invitation(): "is there a live invitation for ME to this
+-- organization with this role?" SECURITY DEFINER for the recursion reason
+-- documented above: the memberships INSERT policy needs to read
+-- `invitations`, whose own policies read `memberships`. Same constraints as
+-- the other definer helpers -- private schema, identity read from the session
+-- (never an argument), EXECUTE revoked from PUBLIC, pinned search_path,
+-- returns a boolean only. The role is passed as text (not the enum type) so
+-- this script can run before the migration that creates the type.
+-- ---------------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION app_private.current_user_email()
+RETURNS text
+LANGUAGE sql
+STABLE
+SET search_path = ''
+AS $$
+  SELECT lower(nullif(current_setting('app.current_user_email', true), ''));
+$$;
+
+CREATE OR REPLACE FUNCTION app_private.has_pending_invitation(org_id uuid, invited_role text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.invitations i
+    WHERE i.organization_id = org_id
+      AND i.role::text = invited_role
+      AND i.status = 'pending'
+      AND i.expires_at > now()
+      AND i.email = lower(nullif(current_setting('app.current_user_email', true), ''))
+  );
+$$;
+
+REVOKE ALL ON FUNCTION app_private.current_user_email() FROM PUBLIC;
+REVOKE ALL ON FUNCTION app_private.has_pending_invitation(uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION app_private.current_user_email() TO app_runtime, app_migrator;
+GRANT EXECUTE ON FUNCTION app_private.has_pending_invitation(uuid, text) TO app_runtime, app_migrator;

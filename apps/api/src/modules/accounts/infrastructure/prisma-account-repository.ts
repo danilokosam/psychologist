@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { MembershipRole, MembershipStatus } from '@psych/types';
+import type { MembershipRole, MembershipStatus, SupportedLocale } from '@psych/types';
 import type { Tx } from '../../../shared/db/tenant-context';
 import type { Membership, Organization, Profile } from '../domain/account';
 import type { AccountRepository } from '../application/ports/account-repository';
@@ -24,6 +24,18 @@ type MembershipRow = {
 export class PrismaAccountRepository implements AccountRepository {
   constructor(private readonly tx: Tx) {}
 
+  async lockAccount(userId: string): Promise<void> {
+    // Transaction-scoped advisory lock keyed on the user: a second concurrent
+    // bootstrap for the same user waits here until the first commits, then
+    // reads the profile/membership the first one wrote. Other users are never
+    // blocked (different key). Released automatically at commit/rollback, so
+    // it's safe through the transaction-mode pooler -- unlike a session lock,
+    // it can't leak onto a recycled connection. `hashtextextended` maps the
+    // id to the bigint key the lock function takes; the prefix keeps these
+    // keys apart from any other advisory lock added later.
+    await this.tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${`account:${userId}`}, 0))`;
+  }
+
   async findProfile(userId: string): Promise<Profile | null> {
     const row = await this.tx.profile.findUnique({
       where: { id: userId },
@@ -44,6 +56,17 @@ export class PrismaAccountRepository implements AccountRepository {
       select: { id: true, fullName: true, locale: true },
     });
     return toProfile(row);
+  }
+
+  async updateLocale(input: { userId: string; locale: SupportedLocale }): Promise<Profile | null> {
+    // updateMany, not update: zero matched rows (no profile yet -- or, if this
+    // were ever called with someone else's id, RLS hiding their row) is a
+    // normal "not found" here, not an exception.
+    const { count } = await this.tx.profile.updateMany({
+      where: { id: input.userId },
+      data: { locale: input.locale },
+    });
+    return count === 1 ? this.findProfile(input.userId) : null;
   }
 
   async listMemberships(userId: string): Promise<Membership[]> {

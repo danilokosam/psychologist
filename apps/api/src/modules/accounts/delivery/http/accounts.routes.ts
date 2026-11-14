@@ -1,10 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import { Router } from 'express';
-import { accountResponseSchema, bootstrapAccountRequestSchema } from '@psych/types';
+import {
+  accountResponseSchema,
+  bootstrapAccountRequestSchema,
+  updateProfileRequestSchema,
+} from '@psych/types';
 import { buildAccountsModule } from '../../../../composition/container';
 import { withTenantContext, withUserContext } from '../../../../shared/db/tenant-context';
 import { requireAuth } from '../../../../shared/middleware/require-auth';
 import { resolveOrganization } from '../../../../shared/middleware/resolve-organization';
+import { requireRole } from '../../../../shared/middleware/require-role';
+import { PERMISSIONS } from '../../../../shared/authorization/permissions';
 import { AppError } from '../../../../shared/middleware/error-handler';
 import { asyncHandler } from '../../../../shared/http/async-handler';
 import { authContext, tenantContext } from '../../../../shared/http/request-context';
@@ -63,6 +69,34 @@ accountsRouter.get(
 );
 
 /**
+ * Updates the caller's own profile preferences -- today only the UI language
+ * (F-013). There is deliberately no user id anywhere in the request: the
+ * profile updated is always the token subject's.
+ */
+accountsRouter.patch(
+  '/me',
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const { userId } = authContext(req);
+
+    const body = updateProfileRequestSchema.safeParse(req.body ?? {});
+    if (!body.success) {
+      throw new AppError(400, 'Invalid request body', 'BAD_REQUEST');
+    }
+
+    const account = await withUserContext({ userId }, (tx) =>
+      buildAccountsModule(tx).updateLocale({ userId, locale: body.data.locale }),
+    );
+
+    if (!account) {
+      throw new AppError(404, 'Account has not been bootstrapped', 'NOT_FOUND');
+    }
+
+    res.json(accountResponseSchema.parse(account));
+  }),
+);
+
+/**
  * The organization named by the X-Organization-Id header.
  *
  * This is the first endpoint that runs under full tenant context, so it's
@@ -75,6 +109,7 @@ accountsRouter.get(
   '/organizations/current',
   requireAuth,
   resolveOrganization,
+  requireRole(PERMISSIONS['organization.read']),
   asyncHandler(async (req, res) => {
     const { userId, organizationId, role } = tenantContext(req);
 

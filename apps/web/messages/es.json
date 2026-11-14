@@ -29,6 +29,44 @@
     "signedInAs": "Sesión iniciada como",
     "practice": "Consulta",
     "role": "Rol",
-    "signOut": "Cerrar sesión"
+    "signOut": "Cerrar sesión",
+    "organizationOption": "{name} — {role}"
+  },
+  "roles": {
+    "owner": "Titular",
+    "psychologist": "Psicólogo/a",
+    "admin_staff": "Personal administrativo"
+  },
+  "invitations": {
+    "title": "Equipo",
+    "description": "Invita a un/a psicólogo/a o a personal administrativo a esta consulta. Comparte tú el enlace: solo funciona para el correo invitado y caduca en 7 días.",
+    "email": "Correo electrónico",
+    "role": "Rol",
+    "invite": "Crear invitación",
+    "sending": "Creando...",
+    "linkReady": "Invitación creada. Copia este enlace ahora y envíaselo a la persona: no se volverá a mostrar.",
+    "copy": "Copiar enlace",
+    "copied": "Copiado",
+    "none": "No hay invitaciones pendientes.",
+    "expires": "caduca el {date}",
+    "expired": "caducada",
+    "revoke": "Revocar",
+    "duplicate": "Ya existe una invitación pendiente para este correo.",
+    "createFailed": "No se pudo crear la invitación.",
+    "revokeFailed": "No se pudo revocar la invitación.",
+    "loadFailed": "No se pudieron cargar las invitaciones."
+  },
+  "acceptInvitation": {
+    "title": "Unirse a una consulta",
+    "working": "Aceptando tu invitación...",
+    "accepted": "Te has unido a la consulta.",
+    "invalid": "Esta invitación no es válida. Puede que haya caducado, se haya revocado o ya se haya usado, o que se enviara a un correo distinto del de tu sesión.",
+    "alreadyMember": "Ya eres miembro de esta consulta.",
+    "missing": "No se encontró ninguna invitación. Abre el enlace completo que te enviaron.",
+    "error": "Algo salió mal. Vuelve a abrir el enlace.",
+    "goToDashboard": "Ir al panel"
+  },
+  "locale": {
+    "label": "Idioma"
   }
 }

@@ -10,14 +10,14 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
-      auth?: { userId: string };
+      auth?: { userId: string; email?: string };
       tenant?: { organizationId: string; role: MembershipRole };
     }
   }
 }
 
 /** Identity proven by a verified access token. Requires requireAuth to have run. */
-export function authContext(req: Request): { userId: string } {
+export function authContext(req: Request): { userId: string; email?: string } {
   if (!req.auth) {
     throw new AppError(500, 'Route is missing the requireAuth middleware');
   }

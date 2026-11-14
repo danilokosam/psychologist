@@ -29,6 +29,44 @@
     "signedInAs": "Signed in as",
     "practice": "Practice",
     "role": "Role",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "organizationOption": "{name} — {role}"
+  },
+  "roles": {
+    "owner": "Owner",
+    "psychologist": "Psychologist",
+    "admin_staff": "Administrative staff"
+  },
+  "invitations": {
+    "title": "Team",
+    "description": "Invite a psychologist or administrative staff member to this practice. Share the link yourself — it works only for the invited email address and expires in 7 days.",
+    "email": "Email",
+    "role": "Role",
+    "invite": "Create invitation",
+    "sending": "Creating...",
+    "linkReady": "Invitation created. Copy this link now and send it to the person — it will not be shown again.",
+    "copy": "Copy link",
+    "copied": "Copied",
+    "none": "No pending invitations.",
+    "expires": "expires {date}",
+    "expired": "expired",
+    "revoke": "Revoke",
+    "duplicate": "There is already a pending invitation for this email.",
+    "createFailed": "Could not create the invitation.",
+    "revokeFailed": "Could not revoke the invitation.",
+    "loadFailed": "Could not load invitations."
+  },
+  "acceptInvitation": {
+    "title": "Join a practice",
+    "working": "Accepting your invitation...",
+    "accepted": "You have joined the practice.",
+    "invalid": "This invitation is not valid. It may have expired, been revoked or already been used, or it was sent to a different email address than the one you are signed in with.",
+    "alreadyMember": "You are already a member of this practice.",
+    "missing": "No invitation found. Open the full link you were sent.",
+    "error": "Something went wrong. Please try the link again.",
+    "goToDashboard": "Go to dashboard"
+  },
+  "locale": {
+    "label": "Language"
   }
 }

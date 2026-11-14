@@ -1,8 +1,12 @@
 import type { Prisma } from '@psych/db';
 import { prisma } from './prisma';
 
-/** Verified identity of the caller, taken from the access token -- never from client input. */
-export type UserContext = { userId: string };
+/**
+ * Verified identity of the caller, taken from the access token -- never from
+ * client input. `email` is the token's (verified) email claim; only the
+ * invitation policies read it (ADR-0013).
+ */
+export type UserContext = { userId: string; email?: string | undefined };
 
 /** Verified identity plus the organization the caller has an active membership in. */
 export type TenantContext = UserContext & { organizationId: string };
@@ -33,7 +37,7 @@ export async function withTenantContext<T>(
   fn: (tx: Tx) => Promise<T>,
 ): Promise<T> {
   return prisma.$transaction(async (tx) => {
-    await setIdentity(tx, context.userId);
+    await setIdentity(tx, context);
     await tx.$executeRaw`SELECT set_config('app.current_org_id', ${context.organizationId}, true)`;
     return fn(tx);
   });
@@ -51,11 +55,14 @@ export async function withUserContext<T>(
   fn: (tx: Tx) => Promise<T>,
 ): Promise<T> {
   return prisma.$transaction(async (tx) => {
-    await setIdentity(tx, context.userId);
+    await setIdentity(tx, context);
     return fn(tx);
   });
 }
 
-function setIdentity(tx: Tx, userId: string) {
-  return tx.$executeRaw`SELECT set_config('app.current_user_id', ${userId}, true)`;
+async function setIdentity(tx: Tx, context: UserContext) {
+  await tx.$executeRaw`SELECT set_config('app.current_user_id', ${context.userId}, true)`;
+  if (context.email) {
+    await tx.$executeRaw`SELECT set_config('app.current_user_email', ${context.email}, true)`;
+  }
 }
