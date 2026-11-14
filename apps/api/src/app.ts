@@ -4,7 +4,7 @@ import { healthRouter } from './routes/health';
 import { accountsRouter } from './modules/accounts/delivery/http/accounts.routes';
 import { invitationsRouter } from './modules/organizations/delivery/http/invitations.routes';
 import { patientsRouter } from './modules/patients/delivery/http/patients.routes';
-import { errorHandler } from './shared/middleware/error-handler';
+import { AppError, errorHandler } from './shared/middleware/error-handler';
 
 // Exported separately from server.ts so tests can exercise the app with
 // supertest without binding a real TCP port.
@@ -20,6 +20,11 @@ export function createApp() {
   app.use(accountsRouter);
   app.use(invitationsRouter);
   app.use(patientsRouter);
+
+  // Unknown routes answer in the same JSON error shape as everything else
+  // (docs/API.md), not Express's default HTML page -- which also named the
+  // framework and echoed the method/path back.
+  app.use((_req, _res, next) => next(new AppError(404, 'Not found', 'NOT_FOUND')));
 
   // Must be registered after all routes.
   app.use(errorHandler);

@@ -171,6 +171,7 @@ describe('patients — full stack: role matrix (SECURITY.md)', () => {
       .set('Authorization', `Bearer ${ownerA.token}`)
       .set('X-Organization-Id', orgA);
     expect(response.status).toBe(404);
+    expect(response.body).toEqual({ error: { code: 'NOT_FOUND', message: 'Not found' } });
     expect(await adminDb.patient.count({ where: { id } })).toBe(1);
   });
 
