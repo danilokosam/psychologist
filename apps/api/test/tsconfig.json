@@ -1,0 +1,10 @@
+{
+  // Typechecks the integration suite (outside src/, so it is never compiled
+  // into dist/) together with the code it exercises.
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "noEmit": true
+  },
+  "include": [".", "../src", "../vitest.integration.config.ts"]
+}
