@@ -82,6 +82,12 @@ production) — `@tailwindcss/turbopack` had been installed in Milestone 0 but
 never registered as a Turbopack loader in `next.config.ts`. Registered; the
 shipped CSS now contains the utilities and the warning is gone.
 
+Also fixed after merging: **CI had been red on `main` since Milestone 0.**
+`apps/web`'s typecheck relied on Next's generated route types
+(`LayoutProps`), which only exist after a local build — a clean CI checkout
+never had them. The script now runs `next typegen && tsc --noEmit`, as the
+Next 16 docs recommend for CI.
+
 Synthetic test accounts covering every role and the cross-tenant cases were
 kept in the Supabase project on purpose: `docs/TEST-ACCOUNTS.md`.
 
