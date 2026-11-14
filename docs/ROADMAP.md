@@ -91,9 +91,16 @@ Next 16 docs recommend for CI.
 Synthetic test accounts covering every role and the cross-tenant cases were
 kept in the Supabase project on purpose: `docs/TEST-ACCOUNTS.md`.
 
-Found, not fixed (outside this milestone — next candidates):
-- `supabase db advisors`: `public.rls_auto_enable()` (Supabase's `ensure_rls` event trigger function, not from this repo) is `SECURITY DEFINER` and executable by `anon`/`authenticated`. Low risk — an event-trigger function cannot be invoked directly — but worth revoking `EXECUTE` deliberately.
-- The UI never asks for a full name, so "Signed in as" shows "—" for real sign-ups (the test accounts have names set by SQL).
+Follow-ups, done after the merge (2026-11-14):
+- [x] `rls_auto_enable()` advisor warnings: `EXECUTE` revoked from `PUBLIC`/`anon`/`authenticated` (`packages/db/sql/harden-supabase-defaults.sql`); the `ensure_rls` trigger keeps auto-enabling RLS — verified by creating a table as `app_migrator` in a rolled-back transaction.
+- [x] Sign-up asks for the full name; it reaches `profiles.full_name` on the first bootstrap (verified in the browser with a temporary account, since deleted).
+- [x] CI hardened (README "CI/CD"): `main` protected by a ruleset requiring `check`, `integration` and `audit`; actions upgraded off Node 20 and SHA-pinned; least-privilege permissions; schema-drift check; translation parity check; dependency audit; Dependabot.
+- [x] The drift check immediately found two indexes that existed in the database but not in `schema.prisma` — a future `migrate dev` would have dropped them. Declared.
+- [x] Dependency vulnerabilities: 18 → 2 (both dev-only lint tooling). zod 3 → 4 (a DoS in input validation), vitest 2 → 4, `deepmerge-ts` overridden to 8 (via Prisma's CLI).
+
+Still open:
+- Supabase Auth **leaked-password protection** (HaveIBeenPwned check) is off — the remaining `supabase db advisors` finding. A dashboard toggle (Auth → Passwords); may depend on the plan.
+- Sign-up page heading still says "Sign in" in sign-up mode (cosmetic).
 
 
 
@@ -120,7 +127,7 @@ Found, not fixed (outside this milestone — next candidates):
 ### Milestone 6 — Hardening & beta prep
 **Status: NOT STARTED**
 - Rate limiting, error monitoring (Sentry), backup verification, privacy policy + DPA template, security review, DPIA completed, legal/DPO review of `docs/DATA-INVENTORY.md`.
-- Verify Supabase Auth "Confirm email" is enforced in production (ADR-0013's email binding relies on it).
+- Verify Supabase Auth "Confirm email" is enforced in production (ADR-0013's email binding relies on it), and leaked-password protection is on.
 - **Delete the synthetic `@example.test` test accounts** (`docs/TEST-ACCOUNTS.md`) and their organizations before any real data is admitted — they share a documented password.
 - **DoD:** ready to onboard pilot psychologists under a signed beta agreement. **Real patient data is permitted only after this milestone's legal review is complete** — synthetic data only until then.
 

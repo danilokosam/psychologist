@@ -173,7 +173,11 @@ not just writes.
 - `(organization_id, patient_id)` on `appointments` and
   `clinical_sessions`.
 - `(organization_id, user_id)` unique on `memberships` (also the
-  composite-FK target).
+  composite-FK target); `memberships (user_id)` for "my memberships"
+  lookups; `organizations (created_by)`.
+- CI fails if `schema.prisma` and the migrations disagree (`check:drift`).
+  Prisma does not model CHECK constraints, partial indexes or policies, so
+  those are covered by the integration suite instead.
 - `invitations`: `(organization_id, invited_by)` and
   `(organization_id, accepted_by)` (cover the composite FKs and serve as the
   per-tenant index), `token_hash` unique, partial unique

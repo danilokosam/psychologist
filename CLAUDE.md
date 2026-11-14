@@ -95,10 +95,12 @@ category of hand-run SQL, applied with the privileged connection
   for exactly that reason).
 - `local-test-roles.sql` — creates `app_migrator`/`app_runtime` on the
   throwaway test Postgres only. Never run it against Supabase.
+- `harden-supabase-defaults.sql` — revokes public `EXECUTE` on Supabase's
+  own `rls_auto_enable()` (advisor lints 0028/0029). Re-run on a new project.
 
 Don't fold `sql/` scripts into Prisma migrations; don't re-attempt granting
 a custom role access to `auth` — it's a platform restriction, not a
-privilege you're missing. All three files are idempotent; re-running them is safe.
+privilege you're missing. All of these files are idempotent; re-running them is safe.
 
 **Writing a policy for a new tenant table?** Read the "Identity helpers"
 section of `docs/SECURITY.md` first. Never cast `current_setting(...)`
@@ -221,6 +223,19 @@ invalid/expired/tampered tokens. Integrity tests for any DB constraint
 bypassing attempt. Stack: Vitest/Jest + Supertest for API integration
 tests, Playwright for a small number of critical E2E flows.
 
+## Git and CI workflow
+
+`main` is protected (repository ruleset): no direct or force pushes; changes
+land only through a pull request whose `check`, `integration` and `audit`
+CI jobs are green and up to date with `main` — admins included. So:
+branch → focused commits → push → `gh pr create` → `gh pr checks --watch`
+→ fix until green → `gh pr merge --merge`. Never weaken the ruleset or skip
+a check to get something merged; fix the cause. Run locally before pushing:
+`pnpm lint && pnpm typecheck && pnpm test` and, with
+`pnpm db:test:up`, `pnpm test:integration` (which also checks schema
+drift). `schema.prisma` must always match the migrations — CI fails
+otherwise. Details: README "CI/CD".
+
 ## Documentation requirements
 
 - `/docs` is maintained **during** development, not written retroactively.
@@ -241,7 +256,7 @@ F-003 invitations + org switcher, F-013 language) is applied to Supabase and
 verified in the browser against the real project. **Milestone 2 (Patients)
 is next and has not been started** — but first look at the "Found, not
 fixed" list under Milestone 1 in `docs/ROADMAP.md` (notably:
-the `rls_auto_enable` advisor warning). Track per-feature status
+enabling leaked-password protection in Supabase Auth). Track per-feature status
 in `docs/FEATURES.md`, not here.
 
 Every org-scoped route is `requireAuth → resolveOrganization →
@@ -251,7 +266,7 @@ hand-typed role list — add or reuse an entry in
 `SECURITY.md` matrix).
 
 What exists and is verified end to end:
-- pnpm monorepo, shared TS/ESLint config, GitHub Actions CI: 72 unit tests
+- pnpm monorepo, shared TS/ESLint config, protected `main` + GitHub Actions CI: 72 unit tests
   (`pnpm test`) + 57 integration tests (`pnpm db:test:up && pnpm test:integration`).
 - **Integration harness** (`apps/api/test/integration/`): throwaway Postgres
   17 in Docker (`docker-compose.test.yml`, 127.0.0.1 only, tmpfs), built like
