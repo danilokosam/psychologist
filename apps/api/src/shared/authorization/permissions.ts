@@ -27,7 +27,8 @@ export const PERMISSIONS = {
 
   'patients.read': ALL_ROLES,
   'patients.write': ALL_ROLES, // create + update
-  'patients.delete': OWNER_ONLY, // delete / archive
+  // Archive and restore. There is no delete (ADR-0014).
+  'patients.archive': OWNER_ONLY,
 
   'appointments.read': ALL_ROLES,
   'appointments.write': ALL_ROLES, // create, update, cancel

@@ -65,7 +65,7 @@ export async function makeUser(label: string): Promise<TestUser> {
 /** Wipes all tenant data between test files. Privileged on purpose. */
 export async function resetDatabase() {
   await adminDb.$executeRawUnsafe(
-    'TRUNCATE TABLE invitations, memberships, organizations, profiles RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE patients, invitations, memberships, organizations, profiles RESTART IDENTITY CASCADE',
   );
 }
 
@@ -84,4 +84,27 @@ export async function bootstrapUser(
     throw new Error(`bootstrap failed for ${label}: ${response.status} ${JSON.stringify(response.body)}`);
   }
   return { ...user, organizationId: response.body.memberships[0].organizationId };
+}
+
+/**
+ * Brings `user` into `owner`'s organization through the real invite + accept
+ * flow (ADR-0013), so role fixtures exercise production code too.
+ */
+export async function inviteMember(
+  app: import('express').Express,
+  owner: TestUser & { organizationId: string },
+  role: 'psychologist' | 'admin_staff',
+  user: TestUser,
+): Promise<void> {
+  const { default: request } = await import('supertest');
+  const created = await request(app)
+    .post('/organizations/current/invitations')
+    .set('Authorization', `Bearer ${owner.token}`)
+    .set('X-Organization-Id', owner.organizationId)
+    .send({ email: user.email, role });
+  const accepted = await request(app)
+    .post('/invitations/accept')
+    .set('Authorization', `Bearer ${user.token}`)
+    .send({ token: created.body.token });
+  if (accepted.status !== 200) throw new Error(`seeding ${role} failed: ${accepted.status}`);
 }
