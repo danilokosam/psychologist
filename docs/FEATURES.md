@@ -217,7 +217,12 @@ with a richer version deferred to Extended MVP — noted per feature.
 - **Required tests:** see F-007. Verified in
   `apps/api/test/integration/appointments.test.ts` (role matrix, lifecycle,
   validation, calendar window, cross-tenant 404s, RLS-only) and in the
-  browser with the synthetic accounts.
+  browser with the synthetic accounts (2026-11-14): Ana books, hits a
+  professional and a patient conflict (translated messages), books
+  back-to-back, reschedules in place, is refused an early "completed",
+  cancels; day/week/month views and the professional filter; Carla
+  (admin_staff) books/confirms/cancels but gets `422 INVALID_PROFESSIONAL`
+  as the professional; Mallory gets `404` for everything of Ana's.
 
 ### F-007 — Appointment Conflict Prevention
 **Milestone:** 3 · **Status:** COMPLETED (2026-11-14) · **Scope tier:** Core MVP
