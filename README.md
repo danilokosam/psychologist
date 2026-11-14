@@ -176,8 +176,8 @@ whenever a tenant policy changes; it caught a real hole once already.
 
 | Job | What it guarantees | Blocking |
 |---|---|---|
-| `check` | lint (incl. en/es translation-catalog parity), typecheck (with Next's generated route types), 88 unit tests, production build | yes |
-| `integration` | 174 tests against a real Postgres built exactly like production (roles, RLS helpers, every migration): tenant isolation at the API **and** RLS-only layers, auth, invitations, patients (incl. owner-only archive enforced by RLS), appointments (incl. double-booking refused by the database itself); then **schema drift** — `schema.prisma` must match what the migrations produce | yes |
+| `check` | lint (incl. en/es translation-catalog parity), typecheck (with Next's generated route types), 94 unit tests, production build | yes |
+| `integration` | 208 tests against a real Postgres built exactly like production (roles, RLS helpers, every migration): tenant isolation at the API **and** RLS-only layers, auth, invitations, patients (incl. owner-only archive enforced by RLS), appointments (incl. double-booking refused by the database itself), clinical sessions/notes (admin_staff and non-author psychologists refused by RLS alone, every note access audited); then **schema drift** — `schema.prisma` must match what the migrations produce | yes |
 | `audit` | `pnpm audit --prod --audit-level high` (production dependencies); a full audit is reported but not blocking | prod: yes |
 
 **`main` is protected** by a repository ruleset: no direct pushes, no force

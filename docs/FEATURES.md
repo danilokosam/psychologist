@@ -242,7 +242,7 @@ with a richer version deferred to Extended MVP — noted per feature.
   constraint is the only one, mapped to `409`.
 
 ### F-008 — Clinical Session Recording
-**Milestone:** 4 · **Status:** NOT STARTED · **Scope tier:** Core MVP (minimal flow)
+**Milestone:** 4 · **Status:** COMPLETED (2026-11-14) · **Scope tier:** Core MVP (minimal flow)
 - **Purpose:** Record that a session actually took place, distinct from
   the scheduled appointment.
 - **Acceptance criteria:** A clinical session can be created by `owner`/
@@ -253,9 +253,16 @@ with a richer version deferred to Extended MVP — noted per feature.
   (see the permission matrix, `docs/SECURITY.md`).
 - **Required tests:** composite-FK cross-org rejection; `admin_staff`
   read-allowed/write-denied per the matrix.
+- **As built:** `apps/api/src/modules/clinical/`, migration
+  `20261115120000_clinical_sessions_notes_audit`; recording from an
+  appointment links it (one session per appointment, same patient via
+  composite FK) and marks it completed; no future-dated sessions; archived
+  patients get none. UI: patient page "Sessions", appointment "Record
+  session", `/clinical-sessions/[id]`. Verified in
+  `apps/api/test/integration/clinical.test.ts` and in the browser.
 
 ### F-009 — Clinical Notes (versioned)
-**Milestone:** 4 · **Status:** NOT STARTED · **Scope tier:** Core MVP
+**Milestone:** 4 · **Status:** COMPLETED (2026-11-14) · **Scope tier:** Core MVP
 - **Purpose:** Private clinical notes tied to a session, with immutable history.
 - **Acceptance criteria:** Creating/editing a note inserts a new
   `clinical_note_versions` row (never an in-place update); any `owner`/
@@ -273,6 +280,15 @@ with a richer version deferred to Extended MVP — noted per feature.
   non-author-edit-rejected test (the author-only rule is resource-level, so
   it lives here rather than in F-004's role middleware); audit log entry
   per read/write.
+- **As built ([ADR-0016](decisions/0016-clinical-notes-immutable-rows.md)):**
+  one note per author per session; the current text is the highest version
+  (no pointer — notes and versions are immutable rows, no UPDATE/DELETE
+  grants); `baseVersion` turns concurrent edits into `409 NOTE_STALE`;
+  archived patients' records are frozen. All required tests pass: RLS-only
+  `admin_staff` blocked (zero rows, inserts refused), RLS-only non-author
+  version refused, API non-author `403 NOT_NOTE_AUTHOR`, audit row per
+  read/write verified. UI: own note editor (new version on save), colleagues'
+  notes read-only, history on demand, spell-check off.
 
 ### F-010 — Payment Ledger
 **Milestone:** 5 · **Status:** NOT STARTED · **Scope tier:** Core MVP (minimal); refunds and revenue summaries are Extended MVP
@@ -296,12 +312,16 @@ with a richer version deferred to Extended MVP — noted per feature.
 - **Required tests:** aggregation query correctness per metric.
 
 ### F-012 — Audit Logging
-**Milestone:** 4 (introduced), ongoing · **Status:** NOT STARTED
+**Milestone:** 4 (introduced), ongoing · **Status:** COMPLETED for clinical notes (2026-11-14); extend to new sensitive resources as they appear
 - **Purpose:** Accountability trail, especially for clinical note access.
 - **Acceptance criteria:** Every clinical-note read/write produces an
   `audit_logs` entry with actor, action, resource, and timestamp.
 - **Required tests:** entry created for read and for write; entry
   correctly scoped to the acting user's organization.
+- **As built:** `shared/audit/` (port + Prisma adapter), written in the same
+  transaction as the access (fail closed); `audit_logs` INSERT-only for the
+  app (no SELECT); action vocabulary enforced by CHECK; no content, no IP.
+  Reviewing the trail is out-of-band until an owner-facing view exists.
 
 ### F-013 — Language Preference (persisted)
 **Milestone:** 1 · **Status:** COMPLETED · **Scope tier:** Core MVP (simple toggle, persisted); a dedicated, fuller settings page is Extended MVP

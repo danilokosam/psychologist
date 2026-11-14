@@ -278,9 +278,9 @@ them one at a time — each must be up to date with `main` and green.
 
 ## Current milestone and status
 
-**Milestones 0–3 are COMPLETE.** Milestone 3 (F-006 calendar, F-007
-conflict prevention) is applied to Supabase and verified in the browser.
-**Milestone 4 (Clinical sessions & notes) is next and has not been
+**Milestones 0–4 are COMPLETE.** Milestone 4 (F-008 sessions, F-009
+versioned notes, F-012 audit) is applied to Supabase and verified in the
+browser. **Milestone 5 (Payments & dashboard) is next and has not been
 started.** Track per-feature status
 in `docs/FEATURES.md`, not here.
 
@@ -291,8 +291,8 @@ hand-typed role list — add or reuse an entry in
 `SECURITY.md` matrix).
 
 What exists and is verified end to end:
-- pnpm monorepo, shared TS/ESLint config, protected `main` + GitHub Actions CI: 88 unit tests
-  (`pnpm test`) + 174 integration tests (`pnpm db:test:up && pnpm test:integration`).
+- pnpm monorepo, shared TS/ESLint config, protected `main` + GitHub Actions CI: 94 unit tests
+  (`pnpm test`) + 208 integration tests (`pnpm db:test:up && pnpm test:integration`).
 - **Integration harness** (`apps/api/test/integration/`): throwaway Postgres
   17 in Docker (`docker-compose.test.yml`, 127.0.0.1 only, tmpfs), built like
   production — roles, `rls-helpers.sql`, every migration — with the API as
@@ -347,12 +347,20 @@ What exists and is verified end to end:
   owner/psychologist can be the professional (`is_active_clinician`). A
   failed statement aborts the transaction: translate the error, don't
   continue querying in it. The calendar UI uses the browser's time zone.
+- **Clinical notes** ([ADR-0016](docs/decisions/0016-clinical-notes-immutable-rows.md)):
+  notes and versions are immutable rows (no UPDATE/DELETE grants); current
+  text = highest version; writes need `baseVersion`; only the author adds
+  versions and `admin_staff` sees nothing — both enforced by RLS on its own.
+  **Every access to note content goes through a use case that writes
+  `audit_logs` in the same transaction** — never read `clinical_note_versions`
+  anywhere else. `audit_logs` is INSERT-only for the app. Never log, cache
+  (`no-store`) or put note content in metadata/errors.
 - Read-then-write account operations (bootstrap, accepting an invitation)
   take a per-user transaction-scoped advisory lock (`lockAccount`) first —
   copy that pattern for any future "create if missing" flow.
 
-What does **not** exist: clinical sessions,
-clinical notes, payments, dashboard metrics, password recovery UI, membership
+What does **not** exist: payments, dashboard metrics, an audit-log viewer,
+password recovery UI, membership
 removal/role changes, email delivery of invitations, and any deployment. Full
 detail: `docs/ROADMAP.md`. **Work proceeds feature by feature, within one
 milestone at a time — do not jump ahead to a later milestone's features.**
@@ -390,6 +398,7 @@ because they will bite again:
 14. Invitations require **both** the one-time link token (stored only as a hash, carried in the URL fragment) **and** the invitee's verified email; `owner` is never invitable; invitations are revoked, never deleted. See [ADR-0013](docs/decisions/0013-organization-invitations.md).
 15. Patients are **archived, never deleted** through the application; archiving is owner-only in RLS too. Hard erasure waits for the Milestone 6 legal review. See [ADR-0014](docs/decisions/0014-patients-archived-not-deleted.md).
 16. Appointment double-booking is prevented by database exclusion constraints, **scoped per organization**; appointments are cancelled, never deleted. See [ADR-0015](docs/decisions/0015-appointment-conflicts-per-organization.md).
+17. Clinical notes: one immutable note per author per session, versions only appended, author-only writes and no `admin_staff` access enforced by RLS, every access audited in the same transaction. See [ADR-0016](docs/decisions/0016-clinical-notes-immutable-rows.md).
 
 Full rationale and alternatives considered for each: `docs/decisions/`.
 

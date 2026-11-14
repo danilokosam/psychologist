@@ -145,6 +145,38 @@ try {
     appointmentDeleteDenied = /permission denied/.test(String(error));
   }
   check('nobody can delete appointments (no DELETE grant)', appointmentDeleteDenied);
+
+  // Clinical data (Milestone 4).
+  const strangerClinical = await asUserInOrg(userB, orgOfA, (tx) =>
+    Promise.all([
+      tx.clinicalSession.count({ where: { organizationId: orgOfA } }),
+      tx.clinicalNote.count({ where: { organizationId: orgOfA } }),
+      tx.clinicalNoteVersion.count({ where: { organizationId: orgOfA } }),
+    ]),
+  );
+  check(
+    'stranger claiming the organization reads no clinical sessions, notes or versions',
+    strangerClinical.every((n) => n === 0),
+    strangerClinical.join('/'),
+  );
+
+  let auditReadDenied = false;
+  try {
+    await asUserInOrg(userA, orgOfA, (tx) => tx.auditLog.count());
+  } catch (error) {
+    auditReadDenied = /permission denied/.test(String(error));
+  }
+  check('the audit log cannot be read through the application role, not even by an owner', auditReadDenied);
+
+  let versionRewriteDenied = false;
+  try {
+    await asUserInOrg(userA, orgOfA, (tx) =>
+      tx.clinicalNoteVersion.updateMany({ where: { id: '00000000-0000-4000-8000-000000000000' }, data: { content: 'x' } }),
+    );
+  } catch (error) {
+    versionRewriteDenied = /permission denied/.test(String(error));
+  }
+  check('clinical note versions cannot be rewritten (no UPDATE grant)', versionRewriteDenied);
 } finally {
   await prisma.$disconnect();
 }

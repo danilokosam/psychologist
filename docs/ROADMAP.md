@@ -144,9 +144,19 @@ Dependabot's first batch (2026-11-14): merged #2 (7 minor/patch: Next 16.4.6, Re
   still be cancelled).
 
 ### Milestone 4 — Clinical sessions & notes
-**Status: NOT STARTED**
+**Status: COMPLETED** (2026-11-14)
 - Append-only note versioning, role-gated access, audit logging on note access.
 - **DoD:** audit log entries verified in tests for every note read/write; admin_staff-blocked-by-RLS test passing even with the app-layer check removed.
+- **Delivered:** F-008, F-009, F-012 ([ADR-0016](decisions/0016-clinical-notes-immutable-rows.md),
+  amending ADR-0006). Applied to Supabase; `verify-rls-isolation.mjs` 16/16.
+- **Found and fixed during M4:** the note-content CHECK used `btrim()`, which
+  strips only spaces — a note of bare newlines passed (caught by the suite;
+  now a non-whitespace regex). Prisma validation errors could echo note
+  content into server logs — now logged by class name only.
+- **Follow-ups (not blocking):** an owner-facing audit log view (needs its
+  own decision on who may read the trail); a UI to correct a session's
+  time/duration (the API supports it); note templates; whether the audit
+  trail should record IP addresses (M6 legal review).
 
 ### Milestone 5 — Payments & Dashboard
 **Status: NOT STARTED**
@@ -159,6 +169,7 @@ Dependabot's first batch (2026-11-14): merged #2 (7 minor/patch: Next 16.4.6, Re
 - Verify Supabase Auth "Confirm email" is enforced in production (ADR-0013's email binding relies on it).
 - Leaked-password protection: requires upgrading the Supabase project to Pro. Decide before real users: upgrade (also brings daily backups/PITR options relevant to the backup-verification item above), or document compensating controls (stronger password policy, rate limiting, MFA).
 - **Evaluate and apply the deferred dependency upgrades** (table below) — each as its own PR through green CI, *before* real data is admitted, so a regression can only ever hit synthetic data. Then remove the corresponding `ignore` rules from `.github/dependabot.yml` (and the `deepmerge-ts` override once on Prisma 7).
+- **Audit trail review & retention:** decide who may read `audit_logs` and for how long it is kept (it must outlive the records it protects).
 - **Patient erasure and retention** ([ADR-0014](decisions/0014-patients-archived-not-deleted.md)): once the legal review sets the retention period, design the audited erasure procedure for archived patients (and Art. 17 requests).
 - **Delete the synthetic `@example.test` test accounts** (`docs/TEST-ACCOUNTS.md`) and their organizations before any real data is admitted — they share a documented password.
 - **DoD:** ready to onboard pilot psychologists under a signed beta agreement. **Real patient data is permitted only after this milestone's legal review is complete** — synthetic data only until then.
