@@ -279,7 +279,11 @@ What exists and is verified end to end:
   hashed one-time link token in the URL fragment, bound to the invitee's
   verified email; `app.current_user_email` is the third identity variable.
 - Real Supabase project ("psychologist", `eu-central-1`, ref
-  `eddhihxizeeanysekuzs`), linked via `supabase link`.
+  `eddhihxizeeanysekuzs`), linked via `supabase link`. **Free plan** — Pro-only
+  features (e.g. leaked-password protection) are unavailable. Never use
+  `supabase config push` with the repo's `supabase/config.toml`: it is the
+  *local* stack's config and would overwrite the real project's Auth settings
+  (it would turn email confirmation and MFA off).
 - `app_migrator` / `app_runtime` roles, both confirmed `NOBYPASSRLS` and
   non-superuser. `profiles`/`organizations`/`memberships` schema applied as
   Prisma migrations, RLS enabled **and forced**, policies gating on
