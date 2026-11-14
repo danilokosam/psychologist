@@ -35,8 +35,16 @@ enum MembershipRole {
 
 enum MembershipStatus {
   active
+  // Unused: an invitee usually has no profile yet, so invitations live in
+  // their own table (ADR-0013). Kept for a future suspend/reinstate flow.
   invited
   suspended
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  revoked
 }
 
 // 1:1 shadow of Supabase's auth.users (see note above re: the FK).
@@ -70,6 +78,7 @@ model Organization {
 
   creator     Profile      @relation(fields: [createdBy], references: [id])
   memberships Membership[]
+  invitations Invitation[]
 
   @@map("organizations")
 }
@@ -85,9 +94,45 @@ model Membership {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   profile      Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  sentInvitations     Invitation[] @relation("InvitationInviter")
+  acceptedInvitations Invitation[] @relation("InvitationAcceptor")
+
   // ADR-0004: this is the compound unique index every future composite FK
   // referencing "a user acting within an org" (professional_id, author_id,
   // ...) will target -- column order matches docs/DATABASE.md exactly.
   @@unique([organizationId, userId])
   @@map("memberships")
+}
+
+// An owner's offer for someone to join their organization (ADR-0013). Lives
+// apart from `memberships` because the invitee usually has no profile yet.
+// Only the SHA-256 hash of the link token is stored -- never the token.
+model Invitation {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  // Always stored lower-cased (CHECK constraint in the migration).
+  email          String
+  // Never 'owner' (CHECK constraint): ownership transfer is not an invite.
+  role           MembershipRole
+  tokenHash      String           @unique @map("token_hash")
+  status         InvitationStatus @default(pending)
+  invitedBy      String           @map("invited_by") @db.Uuid
+  acceptedBy     String?          @map("accepted_by") @db.Uuid
+  expiresAt      DateTime         @map("expires_at") @db.Timestamptz
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  acceptedAt     DateTime?        @map("accepted_at") @db.Timestamptz
+  revokedAt      DateTime?        @map("revoked_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // ADR-0004: "a user acting within an org" -> composite FK to memberships,
+  // so neither the inviter nor the acceptor can belong to another org.
+  inviter      Membership   @relation("InvitationInviter", fields: [organizationId, invitedBy], references: [organizationId, userId], onDelete: NoAction)
+  acceptor     Membership?  @relation("InvitationAcceptor", fields: [organizationId, acceptedBy], references: [organizationId, userId], onDelete: NoAction)
+
+  @@unique([id, organizationId])
+  // Cover both composite FKs; organization_id leads, so these also serve as
+  // the per-tenant index every tenant table carries.
+  @@index([organizationId, invitedBy])
+  @@index([organizationId, acceptedBy])
+  @@map("invitations")
 }
