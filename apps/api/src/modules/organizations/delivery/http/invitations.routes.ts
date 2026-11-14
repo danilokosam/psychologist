@@ -97,7 +97,7 @@ invitationsRouter.delete(
   ...manageInvitations,
   asyncHandler(async (req, res) => {
     const { userId, organizationId } = tenantContext(req);
-    const invitationId = z.string().uuid().safeParse(req.params.invitationId);
+    const invitationId = z.uuid().safeParse(req.params.invitationId);
     // A malformed id is answered exactly like an unknown one.
     if (!invitationId.success) {
       throw new AppError(404, 'Invitation not found', 'NOT_FOUND');

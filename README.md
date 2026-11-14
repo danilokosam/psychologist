@@ -169,6 +169,41 @@ Asserts at the **database** layer — no application code in the path — that
 one user cannot read, enumerate or write into another's organization. Run it
 whenever a tenant policy changes; it caught a real hole once already.
 
+## CI/CD
+
+**CI** (`.github/workflows/ci.yml`) runs on every pull request and on `main`:
+
+| Job | What it guarantees | Blocking |
+|---|---|---|
+| `check` | lint (incl. en/es translation-catalog parity), typecheck (with Next's generated route types), 72 unit tests, production build | yes |
+| `integration` | 57 tests against a real Postgres built exactly like production (roles, RLS helpers, every migration): tenant isolation at the API **and** RLS-only layers, auth, invitations; then **schema drift** — `schema.prisma` must match what the migrations produce | yes |
+| `audit` | `pnpm audit --prod --audit-level high` (production dependencies); a full audit is reported but not blocking | prod: yes |
+
+**`main` is protected** by a repository ruleset: no direct pushes, no force
+pushes, no deletion; every change goes through a pull request whose `check`,
+`integration` and `audit` jobs pass on a branch that is up to date with
+`main`. This applies to admins too. Workflow:
+
+```bash
+git switch -c feat/something        # work, commit
+git push -u origin feat/something
+gh pr create --fill                  # CI runs on the PR
+gh pr checks --watch                 # wait for green
+gh pr merge --merge --delete-branch  # only possible once all checks pass
+```
+
+**Dependabot** (`.github/dependabot.yml`) opens weekly PRs for npm packages
+(minor/patch grouped, majors separate) and GitHub Actions; they go through
+the same checks. Actions are pinned to commit SHAs.
+
+**CD: not set up yet.** Nothing deploys automatically (no Vercel project
+exists — see `docs/ROADMAP.md`). Database changes reach Supabase manually, in
+order: `packages/db/sql/*.sql` with the privileged connection, then
+`pnpm --filter @psych/db run migrate:deploy`. When deployment is introduced
+it should be: Vercel preview per PR, production only from `main`, and
+migrations applied by a protected, manually approved workflow — never from
+an unreviewed branch.
+
 ## Trying it end to end
 
 With both apps running, visit `http://localhost:3000`:

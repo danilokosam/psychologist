@@ -12,19 +12,20 @@ export type InvitationStatus = z.infer<typeof invitationStatusSchema>;
 // No organizationId (comes from X-Organization-Id, verified by membership)
 // and no invitedBy (comes from the verified token).
 export const createInvitationRequestSchema = z.object({
-  email: z.string().trim().toLowerCase().email().max(320),
+  // Normalize first, then validate the normalized value.
+  email: z.string().trim().toLowerCase().pipe(z.email().max(320)),
   role: invitableRoleSchema,
 });
 export type CreateInvitationRequest = z.infer<typeof createInvitationRequestSchema>;
 
 // What an owner sees. Never includes the token or its hash.
 export const invitationSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   email: z.string(),
   role: invitableRoleSchema,
   status: invitationStatusSchema,
-  expiresAt: z.string().datetime(),
-  createdAt: z.string().datetime(),
+  expiresAt: z.iso.datetime(),
+  createdAt: z.iso.datetime(),
 });
 export type Invitation = z.infer<typeof invitationSchema>;
 
@@ -49,7 +50,7 @@ export const acceptInvitationRequestSchema = z.object({
 export type AcceptInvitationRequest = z.infer<typeof acceptInvitationRequestSchema>;
 
 export const acceptInvitationResponseSchema = z.object({
-  organizationId: z.string().uuid(),
+  organizationId: z.uuid(),
   account: accountResponseSchema,
 });
 export type AcceptInvitationResponse = z.infer<typeof acceptInvitationResponseSchema>;

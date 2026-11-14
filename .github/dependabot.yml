@@ -1,0 +1,23 @@
+# Weekly dependency update PRs. Every one of them must pass CI (lint,
+# typecheck, unit + integration tests, build, audit) before it can be merged
+# -- main is protected -- so an upgrade that breaks something never lands.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Minor/patch updates batched into one PR; majors stay separate so each
+      # can be reviewed (and migrated, if needed) on its own.
+      minor-and-patch:
+        update-types: [minor, patch]

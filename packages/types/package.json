@@ -11,13 +11,13 @@
     "test": "echo \"no tests in @psych/types yet\" && exit 0"
   },
   "dependencies": {
-    "zod": "^3.24.1"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@psych/config": "workspace:*",
-    "typescript": "^5.7.2",
-    "eslint": "^9.17.0",
     "@typescript-eslint/eslint-plugin": "^8.19.0",
-    "@typescript-eslint/parser": "^8.19.0"
+    "@typescript-eslint/parser": "^8.19.0",
+    "eslint": "^9.17.0",
+    "typescript": "^5.7.2"
   }
 }

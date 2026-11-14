@@ -12,6 +12,7 @@ import {
 import { apiFetch } from '@/lib/api-client';
 import { setLocaleCookie } from '@/lib/locale';
 import { getStoredActiveOrganization, setStoredActiveOrganization } from '@/lib/active-organization';
+import { fullNameFromSession } from '@/lib/full-name';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { InvitationsPanel } from './invitations-panel';
 
@@ -54,9 +55,14 @@ export function AccountPanel() {
 
     async function load() {
       try {
+        const {
+          data: { session },
+        } = await createSupabaseBrowserClient().auth.getSession();
         const raw = await apiFetch<unknown>('/auth/bootstrap', {
           method: 'POST',
-          body: { organizationName: t('defaultPracticeName') },
+          // fullName only matters on the very first call (profile creation);
+          // bootstrap ignores it once the profile exists.
+          body: { organizationName: t('defaultPracticeName'), fullName: fullNameFromSession(session) },
         });
         const account = accountResponseSchema.parse(raw);
 

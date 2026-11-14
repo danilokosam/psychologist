@@ -18,7 +18,8 @@
     "pending": "Please wait...",
     "switchToSignUp": "Don't have an account? Create one",
     "switchToSignIn": "Already have an account? Sign in",
-    "checkYourEmail": "Check your email to confirm your account."
+    "checkYourEmail": "Check your email to confirm your account.",
+    "fullName": "Full name"
   },
   "dashboard": {
     "title": "Dashboard",

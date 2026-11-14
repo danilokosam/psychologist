@@ -23,21 +23,21 @@ export const bootstrapAccountRequestSchema = z.object({
 export type BootstrapAccountRequest = z.infer<typeof bootstrapAccountRequestSchema>;
 
 export const profileSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   fullName: z.string().nullable(),
   locale: z.string(),
 });
 export type Profile = z.infer<typeof profileSchema>;
 
 export const organizationSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string(),
   slug: z.string(),
 });
 export type Organization = z.infer<typeof organizationSchema>;
 
 export const membershipSchema = z.object({
-  organizationId: z.string().uuid(),
+  organizationId: z.uuid(),
   role: membershipRoleSchema,
   status: membershipStatusSchema,
   organization: organizationSchema,
@@ -50,12 +50,10 @@ export const accountResponseSchema = z.object({
 });
 export type AccountResponse = z.infer<typeof accountResponseSchema>;
 
-// PATCH /me. `.strict()` so a client can't smuggle extra fields (an `id`, say)
+// PATCH /me. A strict object so a client can't smuggle extra fields (an `id`, say)
 // that some future handler might be tempted to read: unknown keys are a 400.
 // Whose profile is updated comes only from the verified token.
-export const updateProfileRequestSchema = z
-  .object({
-    locale: supportedLocaleSchema,
-  })
-  .strict();
+export const updateProfileRequestSchema = z.strictObject({
+  locale: supportedLocaleSchema,
+});
 export type UpdateProfileRequest = z.infer<typeof updateProfileRequestSchema>;

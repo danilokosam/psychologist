@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import { acceptInvitationResponseSchema } from '@psych/types';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { setStoredActiveOrganization } from '@/lib/active-organization';
+import { fullNameFromSession } from '@/lib/full-name';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 type State = 'working' | 'accepted' | 'invalid' | 'alreadyMember' | 'missing' | 'error';
@@ -55,7 +56,12 @@ export function AcceptInvitation() {
       }
 
       try {
-        const raw = await apiFetch<unknown>('/invitations/accept', { method: 'POST', body: { token } });
+        const raw = await apiFetch<unknown>('/invitations/accept', {
+          method: 'POST',
+          // Accepting may create the profile (an invitee going straight to
+          // the link), so the sign-up name is passed here too.
+          body: { token, fullName: fullNameFromSession(session) },
+        });
         const { organizationId } = acceptInvitationResponseSchema.parse(raw);
         window.sessionStorage.removeItem(TOKEN_KEY);
         setStoredActiveOrganization(organizationId);
