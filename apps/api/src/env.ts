@@ -6,18 +6,18 @@ import { z } from 'zod';
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.url(),
   // Used to build the JWKS URL and to validate the `iss` claim on access
   // tokens. No secret: the project signs with an asymmetric key, so the API
   // only needs the public keys published at the JWKS endpoint.
-  SUPABASE_URL: z.string().url(),
+  SUPABASE_URL: z.url(),
 });
 
 function loadEnv() {
   const result = envSchema.safeParse(process.env);
   if (!result.success) {
     console.error('Invalid environment configuration:');
-    console.error(result.error.format());
+    console.error(z.prettifyError(result.error));
     process.exit(1);
   }
   return result.data;

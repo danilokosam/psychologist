@@ -2,7 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { createServer, type Server } from 'node:http';
 import path from 'node:path';
 import { exportJWK, generateKeyPair } from 'jose';
-import type { GlobalSetupContext } from 'vitest/node';
+import type { TestProject } from 'vitest/node';
 
 /**
  * Builds a fresh, production-shaped database for the integration suite and a
@@ -91,7 +91,8 @@ function describeFailure(error: unknown): string {
 
 let server: Server | undefined;
 
-export default async function setup({ provide }: GlobalSetupContext) {
+export default async function setup(project: TestProject) {
+  const provide = project.provide.bind(project);
   try {
     prepareDatabase();
   } catch (error) {

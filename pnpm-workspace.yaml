@@ -19,3 +19,12 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - jose@6.2.17
+
+# Security overrides. Each one needs a reason and an exit condition.
+overrides:
+  # GHSA (high): stack exhaustion merging recursive objects, fixed in 8.x.
+  # Only reached through @prisma/config 6.x (the Prisma CLI's config
+  # loader), never with request data -- but production dependencies must
+  # pass `pnpm audit --prod --audit-level high` in CI. Remove when Prisma is
+  # upgraded to a version that depends on deepmerge-ts >= 8 itself.
+  deepmerge-ts: ^8.0.2

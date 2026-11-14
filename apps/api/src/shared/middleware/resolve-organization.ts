@@ -4,7 +4,7 @@ import { withUserContext } from '../db/tenant-context';
 import { authContext } from '../http/request-context';
 import { AppError } from './error-handler';
 
-const organizationIdSchema = z.string().uuid();
+const organizationIdSchema = z.uuid();
 
 /**
  * Resolves the active organization from the `X-Organization-Id` header and
