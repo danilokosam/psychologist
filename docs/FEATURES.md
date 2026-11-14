@@ -157,7 +157,7 @@ with a richer version deferred to Extended MVP — noted per feature.
   and an empty role list is refused at startup.
 
 ### F-005 — Patient Management (CRUD)
-**Milestone:** 2 · **Status:** COMPLETED (2026-11-15) · **Scope tier:** Core MVP
+**Milestone:** 2 · **Status:** COMPLETED (2026-11-14) · **Scope tier:** Core MVP
 - **Purpose:** Register, edit, and view patients.
 - **Acceptance criteria:** Create/read/update available to `owner`,
   `psychologist`, and `admin_staff`; delete/archive restricted to
@@ -179,7 +179,11 @@ with a richer version deferred to Extended MVP — noted per feature.
   the policy, no DELETE grant, no column grant on organization/creator,
   CHECK constraints and composite FK bypassing the app);
   `verify-rls-isolation.mjs` 10/10 against the live project; browser pass
-  with the synthetic test accounts.
+  with the synthetic test accounts (2026-11-14): Ana (owner) create / edit /
+  archive / restore / search in en+es; Carla (admin_staff) edits but gets
+  `403` on archive/restore, `400` when smuggling `organizationId` or
+  `status: archived`; Mallory gets `404` for Ana's patient under her own and
+  under Ana's organization header.
 - **Security considerations:** org-scoped RLS (`docs/SECURITY.md`); no
   `national_id` or other unjustified field collected
   (`docs/DATA-INVENTORY.md`); `organizationId` is always taken from the

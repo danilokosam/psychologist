@@ -1,7 +1,7 @@
 # ADR-0014: Patients are archived, never deleted, and archiving is owner-only down to RLS
 
 **Status:** Accepted
-**Date:** 2026-11-15
+**Date:** 2026-11-14
 
 ## Context
 

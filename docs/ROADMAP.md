@@ -108,7 +108,7 @@ Dependabot's first batch (2026-11-14): merged #2 (7 minor/patch: Next 16.4.6, Re
 
 
 ### Milestone 2 — Patients
-**Status: COMPLETED** (2026-11-15)
+**Status: COMPLETED** (2026-11-14)
 - Patient CRUD, pagination/search.
 - **DoD:** RLS-on-patients verified by tests; data-inventory entries for any new field added before merge.
 - **Delivered:** F-005 — `patients` table with forced RLS, owner-only

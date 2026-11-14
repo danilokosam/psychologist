@@ -84,4 +84,16 @@ invite flow can be exercised again from scratch by inviting any new
 above, or by inviting an existing test account into a practice it doesn't
 belong to yet — e.g. Mallory into Consulta Diego).
 
-> Keep this file in sync if accounts, roles or organizations change.
+## Synthetic patients (Milestone 2)
+
+| Patient | Organization | State as left |
+|---|---|---|
+| José Sintético Pérez (TEST) — id `44f62aef-b0f0-4982-9ec4-facaf09bc253` | Consulta Ana (TEST) | `inactive`; has been archived and restored once (browser pass 2026-11-14) |
+
+Good for: Carla (`admin_staff`) can edit it but gets `403` on archive/restore;
+Mallory gets `404` for it under any organization header; Ana can archive
+and restore it. Add more patients through the UI or `POST /patients` — always
+fictional, always with "(TEST)" in the name.
+
+> Keep this file in sync if accounts, roles, organizations or synthetic
+> patients change.
