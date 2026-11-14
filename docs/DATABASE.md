@@ -113,39 +113,59 @@ while removing just an inviter's membership is still refused.
 > (no formal tax invoicing, no insurance claims) justifies collecting it.
 > Add it only when a specific feature needs it. See `docs/DATA-INVENTORY.md`.
 
-### `appointments`
-`id PK`, `organization_id FK`,
+### `appointments` (implemented, Milestone 3)
+`id PK`, `organization_id FK` (cascade with the organization),
 `patient_id` → composite FK to `patients (id, organization_id)`,
-`professional_id` → composite FK to `memberships (user_id, organization_id)`,
+`professional_id` → composite FK to `memberships (organization_id, user_id)`,
 `scheduled_start timestamptz`, `scheduled_end timestamptz`,
-`status enum(scheduled, confirmed, completed, cancelled, no_show)`,
-`modality enum(online, in_person)`, `created_by`.
+`status enum(scheduled, confirmed, completed, cancelled, no_show)` default
+`scheduled`, `modality enum(in_person, online)` default `in_person`,
+`created_by` → composite FK to `memberships`, `created_at`, `updated_at`,
+`cancelled_at`. `UNIQUE (id, organization_id)` for future composite FKs
+(clinical sessions, payments). No free-text notes column (clinical content
+would reach `admin_staff`).
 
-Constraints:
+Constraints ([ADR-0015](decisions/0015-appointment-conflicts-per-organization.md)):
 ```sql
-ALTER TABLE appointments ADD CONSTRAINT appointment_time_valid
-  CHECK (scheduled_end > scheduled_start);
+ALTER TABLE appointments ADD CONSTRAINT appointment_time_valid CHECK (
+  scheduled_end > scheduled_start
+  AND scheduled_end - scheduled_start <= interval '12 hours'
+);
 
--- A professional cannot have two overlapping, non-cancelled appointments.
--- "cancelled" is the only status that frees the slot — scheduled, confirmed,
--- completed and no_show all represent time the professional was unavailable.
+-- Half-open ranges: back-to-back appointments are allowed. "cancelled" is the
+-- only status that frees the slot. Scoped per organization: constraint checks
+-- see all rows (no RLS), so a cross-organization check would leak another
+-- practice's schedule through the conflict error.
 ALTER TABLE appointments ADD CONSTRAINT no_professional_overlap
   EXCLUDE USING gist (
+    organization_id WITH =,
     professional_id WITH =,
-    tstzrange(scheduled_start, scheduled_end) WITH &&
+    tstzrange(scheduled_start, scheduled_end, '[)') WITH &&
   ) WHERE (status <> 'cancelled');
 
--- Same reasoning applied to the patient side: prevents a patient being
--- double-booked across two professionals in the same org at overlapping times.
 ALTER TABLE appointments ADD CONSTRAINT no_patient_overlap
   EXCLUDE USING gist (
+    organization_id WITH =,
     patient_id WITH =,
-    tstzrange(scheduled_start, scheduled_end) WITH &&
+    tstzrange(scheduled_start, scheduled_end, '[)') WITH &&
   ) WHERE (status <> 'cancelled');
 ```
+Plus `appointments_cancelled_consistent` (`status = 'cancelled'` ⇔
+`cancelled_at IS NOT NULL`). Requires `btree_gist`
+(`packages/db/sql/extensions.sql`, `extensions` schema).
+
 Rescheduling updates the existing row's time range (re-validated by the
 same constraints) rather than cancel-and-recreate, preserving one
 appointment identity through its lifecycle.
+
+- **Grants:** no `DELETE`; `UPDATE` only on `professional_id`,
+  `scheduled_start`, `scheduled_end`, `status`, `modality`, `cancelled_at`,
+  `updated_at` — the patient, organization and creator never change.
+- **RLS:** tenant + verified membership on every policy. Insert: as yourself,
+  never pre-cancelled, professional must be an active owner/psychologist
+  (`app_private.is_active_clinician`), patient not archived. Update: a
+  cancelled row is invisible (final); the new row's professional must be a
+  valid clinician unless the update is the cancellation itself.
 
 ### `clinical_sessions`
 Represents a session that actually took place — a distinct concept from
@@ -190,7 +210,8 @@ not just writes.
 - `organization_id` on every tenant table.
 - `(organization_id, scheduled_start)` and
   `(organization_id, professional_id, scheduled_start)` on `appointments`
-  for calendar queries.
+  for calendar queries (implemented); the two exclusion constraints add
+  their own GiST indexes.
 - `(organization_id, patient_id)` on `appointments` and
   `clinical_sessions`.
 - `(organization_id, user_id)` unique on `memberships` (also the

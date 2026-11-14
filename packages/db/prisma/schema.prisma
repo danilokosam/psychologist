@@ -55,6 +55,20 @@ enum PatientStatus {
   archived
 }
 
+// `cancelled` is the only status that frees the time slot (ADR-0015).
+enum AppointmentStatus {
+  scheduled
+  confirmed
+  completed
+  cancelled
+  no_show
+}
+
+enum AppointmentModality {
+  in_person
+  online
+}
+
 // 1:1 shadow of Supabase's auth.users (see note above re: the FK).
 model Profile {
   id        String   @id @db.Uuid
@@ -84,10 +98,11 @@ model Organization {
   createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz
   deletedAt        DateTime?        @map("deleted_at") @db.Timestamptz
 
-  creator     Profile      @relation(fields: [createdBy], references: [id])
-  memberships Membership[]
-  invitations Invitation[]
-  patients    Patient[]
+  creator      Profile       @relation(fields: [createdBy], references: [id])
+  memberships  Membership[]
+  invitations  Invitation[]
+  patients     Patient[]
+  appointments Appointment[]
 
   // Created by migration 20261109172000 but never declared here, so a future
   // `prisma migrate dev` would have generated a DROP for it. Caught by the CI
@@ -107,9 +122,11 @@ model Membership {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   profile      Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  sentInvitations     Invitation[] @relation("InvitationInviter")
-  acceptedInvitations Invitation[] @relation("InvitationAcceptor")
-  createdPatients     Patient[]    @relation("PatientCreator")
+  sentInvitations     Invitation[]  @relation("InvitationInviter")
+  acceptedInvitations Invitation[]  @relation("InvitationAcceptor")
+  createdPatients     Patient[]     @relation("PatientCreator")
+  appointments        Appointment[] @relation("AppointmentProfessional")
+  createdAppointments Appointment[] @relation("AppointmentCreator")
 
   // ADR-0004: this is the compound unique index every future composite FK
   // referencing "a user acting within an org" (professional_id, author_id,
@@ -174,9 +191,10 @@ model Patient {
   updatedAt             DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   archivedAt            DateTime?     @map("archived_at") @db.Timestamptz
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   // ADR-0004: the creator is "a user acting within an org".
-  creator      Membership   @relation("PatientCreator", fields: [organizationId, createdBy], references: [organizationId, userId], onDelete: NoAction)
+  creator      Membership    @relation("PatientCreator", fields: [organizationId, createdBy], references: [organizationId, userId], onDelete: NoAction)
+  appointments Appointment[]
 
   // ADR-0004: target of every future composite FK (appointments, sessions...).
   @@unique([id, organizationId])
@@ -184,4 +202,41 @@ model Patient {
   // The list is ordered by name within one organization.
   @@index([organizationId, fullName])
   @@map("patients")
+}
+
+// F-006/F-007, ADR-0015. Double-booking is made impossible by two exclusion
+// constraints in the migration (Prisma cannot express them): per
+// organization, no two non-cancelled appointments of the same professional,
+// or of the same patient, may overlap. Deliberately no free-text notes field
+// (clinical content would be visible to admin_staff).
+model Appointment {
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String              @map("organization_id") @db.Uuid
+  // Immutable after creation (no UPDATE grant on the column).
+  patientId      String              @map("patient_id") @db.Uuid
+  // Must be an active owner/psychologist (RLS, is_active_clinician).
+  professionalId String              @map("professional_id") @db.Uuid
+  scheduledStart DateTime            @map("scheduled_start") @db.Timestamptz
+  scheduledEnd   DateTime            @map("scheduled_end") @db.Timestamptz
+  status         AppointmentStatus   @default(scheduled)
+  modality       AppointmentModality @default(in_person)
+  createdBy      String              @map("created_by") @db.Uuid
+  createdAt      DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime            @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  cancelledAt    DateTime?           @map("cancelled_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // ADR-0004: composite FKs, so neither the patient nor the professional can
+  // belong to another organization.
+  patient      Patient      @relation(fields: [patientId, organizationId], references: [id, organizationId], onDelete: NoAction)
+  professional Membership   @relation("AppointmentProfessional", fields: [organizationId, professionalId], references: [organizationId, userId], onDelete: NoAction)
+  creator      Membership   @relation("AppointmentCreator", fields: [organizationId, createdBy], references: [organizationId, userId], onDelete: NoAction)
+
+  @@unique([id, organizationId])
+  // Calendar queries: the whole practice, or one professional, by time.
+  @@index([organizationId, scheduledStart])
+  @@index([organizationId, professionalId, scheduledStart])
+  @@index([organizationId, patientId])
+  @@index([organizationId, createdBy])
+  @@map("appointments")
 }

@@ -194,18 +194,38 @@ with a richer version deferred to Extended MVP — noted per feature.
   rejected on delete.
 
 ### F-006 — Appointment Scheduling & Calendar
-**Milestone:** 3 · **Status:** NOT STARTED · **Scope tier:** Core MVP
+**Milestone:** 3 · **Status:** COMPLETED (2026-11-14) · **Scope tier:** Core MVP
 - **Purpose:** Day/week/month calendar; create/edit/cancel/reschedule appointments.
 - **Acceptance criteria:** All CRUD operations respect the composite FKs
   (patient and professional must belong to the same org); rescheduling
   updates the existing row's time range, not cancel+recreate. Available
   to `owner`, `psychologist`, and `admin_staff` per the permission matrix
   (`docs/SECURITY.md`).
-- **Modules/files:** TBD.
-- **Required tests:** see F-007.
+- **As built:** day/week/month calendar (browser time zone, Monday-first
+  weeks, view state in the URL), book / reschedule (same row) / reassign /
+  record outcome / cancel; patient page lists upcoming appointments.
+  Cancelled appointments are final and nothing is deleted
+  ([ADR-0015](decisions/0015-appointment-conflicts-per-organization.md)).
+  Only an active owner/psychologist can be the professional; archived
+  patients cannot be booked.
+- **Modules/files:** `apps/api/src/modules/appointments/`,
+  `GET /organizations/current/members` (organizations module);
+  `packages/types/src/appointments.ts`; migration
+  `20261115110000_appointments`, `sql/extensions.sql`,
+  `app_private.is_active_clinician`; web: `apps/web/src/app/appointments/`,
+  `components/appointments/`, `lib/calendar.ts`.
+- **Required tests:** see F-007. Verified in
+  `apps/api/test/integration/appointments.test.ts` (role matrix, lifecycle,
+  validation, calendar window, cross-tenant 404s, RLS-only) and in the
+  browser with the synthetic accounts (2026-11-14): Ana books, hits a
+  professional and a patient conflict (translated messages), books
+  back-to-back, reschedules in place, is refused an early "completed",
+  cancels; day/week/month views and the professional filter; Carla
+  (admin_staff) books/confirms/cancels but gets `422 INVALID_PROFESSIONAL`
+  as the professional; Mallory gets `404` for everything of Ana's.
 
 ### F-007 — Appointment Conflict Prevention
-**Milestone:** 3 · **Status:** NOT STARTED · **Scope tier:** Core MVP
+**Milestone:** 3 · **Status:** COMPLETED (2026-11-14) · **Scope tier:** Core MVP
 - **Purpose:** Prevent a professional (and a patient) from being double-booked.
 - **Acceptance criteria:** An overlapping, non-cancelled appointment for
   the same professional (or same patient) is rejected — at the database
@@ -214,6 +234,12 @@ with a richer version deferred to Extended MVP — noted per feature.
 - **Required tests:** a test that attempts the conflicting insert
   **directly against the database**, bypassing the application layer, to
   prove the constraint — not just the app-level check — holds.
+  **Done:** the "F-007 definition of done" block in `appointments.test.ts`
+  inserts and updates with the privileged client (no API, no RLS) and is
+  refused by `no_professional_overlap` / `no_patient_overlap`; back-to-back
+  and cancelled overlaps are accepted. As built, the constraints are scoped
+  per organization (ADR-0015) and there is no app-level pre-check — the
+  constraint is the only one, mapped to `409`.
 
 ### F-008 — Clinical Session Recording
 **Milestone:** 4 · **Status:** NOT STARTED · **Scope tier:** Core MVP (minimal flow)

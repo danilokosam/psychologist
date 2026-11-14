@@ -229,3 +229,35 @@ $$;
 
 REVOKE ALL ON FUNCTION app_private.has_active_role(uuid, text[]) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app_private.has_active_role(uuid, text[]) TO app_runtime, app_migrator;
+
+
+-- ---------------------------------------------------------------------------
+-- is_active_clinician (Milestone 3, appointments)
+--
+-- True when `user_id` -- NOT necessarily the caller -- holds an active
+-- `owner` or `psychologist` membership in org_id. Appointment policies use it
+-- to refuse booking an admin_staff member (or a suspended one) as the
+-- professional: the composite FK only proves "is a member", not "can see
+-- patients clinically". SECURITY DEFINER for the same recursion reason as
+-- is_active_member (ADR-0012); returns only a boolean about a membership the
+-- caller's organization already exposes to them.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION app_private.is_active_clinician(org_id uuid, member_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.memberships m
+    WHERE m.organization_id = org_id
+      AND m.user_id = member_id
+      AND m.status = 'active'
+      AND m.role IN ('owner', 'psychologist')
+  );
+$$;
+
+REVOKE ALL ON FUNCTION app_private.is_active_clinician(uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION app_private.is_active_clinician(uuid, uuid) TO app_runtime, app_migrator;

@@ -1,7 +1,7 @@
 # API
 
 Authentication, account bootstrap, language preference, organization
-invitations and patients are implemented. This document defines the conventions
+invitations, patients and appointments are implemented. This document defines the conventions
 every endpoint must follow; the endpoint table below is filled in
 incrementally, one feature at a time, as each is actually built and
 verified — never documented ahead of a working, tested implementation.
@@ -52,6 +52,12 @@ verified — never documented ahead of a working, tested implementation.
 | GET | `/patients/:id` | One patient (archived ones included) | Bearer + org; `patients.read` | Implemented (M2) |
 | PATCH | `/patients/:id` | Partial update; `null` clears an optional field. `409 PATIENT_ARCHIVED` for an archived patient (any role) | Bearer + org; `patients.write` | Implemented (M2) |
 | POST | `/patients/:id/archive` | Archive (there is no delete — ADR-0014). `409` if already archived | Bearer + org; `patients.archive` (owner) | Implemented (M2) |
+| GET | `/organizations/current/members` | Active members (user id, name, role — no email), e.g. for the professional picker | Bearer + org; `organization.read` (any role) | Implemented (M3) |
+| GET | `/appointments` | Calendar: appointments overlapping `?from=&to=` (ISO instants with offset, window ≤ 62 days), by start. Optional `professionalId`, `patientId`, `includeCancelled=true` | Bearer + org; `appointments.read` | Implemented (M3) |
+| POST | `/appointments` | Book. `409 PROFESSIONAL_CONFLICT` / `PATIENT_CONFLICT` on overlap; `422 INVALID_PATIENT` / `PATIENT_ARCHIVED` / `INVALID_PROFESSIONAL`; `400 INVALID_TIME_RANGE` | Bearer + org; `appointments.write` | Implemented (M3) |
+| GET | `/appointments/:id` | One appointment (cancelled included) | Bearer + org; `appointments.read` | Implemented (M3) |
+| PATCH | `/appointments/:id` | Reschedule (same row), reassign, modality, status incl. outcome (`422 NOT_YET_HAPPENED` before it starts); `409 APPOINTMENT_CANCELLED` | Bearer + org; `appointments.write` | Implemented (M3) |
+| POST | `/appointments/:id/cancel` | Cancel — frees the slot; final. No DELETE exists | Bearer + org; `appointments.write` | Implemented (M3) |
 | POST | `/patients/:id/restore` | Back to `active`. `409` if not archived | Bearer + org; `patients.archive` (owner) | Implemented (M2) |
 
 Everything else is *(not implemented yet — filled in per feature, see `docs/FEATURES.md`)*.
@@ -158,3 +164,29 @@ actions. Responses are `{ "patient": { … } }`, or for the list
 `{ "patients": [ … ], "page": 1, "pageSize": 20, "total": 26 }`; dates of
 birth are `YYYY-MM-DD` strings, timestamps ISO-8601. Unknown, malformed and
 other-organization ids all return the same `404`.
+
+### Appointments
+
+Contracts: `packages/types/src/appointments.ts`. Lists are **bounded by a
+time window instead of paginated** — a calendar always asks for a day, week
+or month, and the 62-day cap bounds the rows. Times are absolute instants
+with an explicit offset (`Z` or `+01:00`); a local time without one is a 400,
+because the server cannot know the user's zone.
+
+```json
+{
+  "patientId": "uuid",
+  "professionalId": "uuid",
+  "startsAt": "2030-01-07T09:00:00Z",
+  "endsAt": "2030-01-07T09:50:00Z",
+  "modality": "in_person",
+  "status": "scheduled"
+}
+```
+
+`status` on create is `scheduled` or `confirmed`; PATCH also accepts
+`completed` / `no_show`, never `cancelled` (use `/cancel`). PATCH never
+accepts `patientId`. Responses embed `patient: { id, fullName }` and
+`professional: { userId, fullName }` (`fullName` is `null` for a
+professional no longer active in the practice).
+

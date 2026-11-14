@@ -237,6 +237,7 @@ running code, not by review — see
 | `app_private.current_user_email()` | The caller's email, from the **verified** token's `email` claim (`app.current_user_email`), lower-cased. Identity, like `current_user_id()` — read only by the invitation policies ([ADR-0013](decisions/0013-organization-invitations.md)) |
 | `app_private.has_pending_invitation(org_id, role)` | Whether a pending, unexpired invitation exists for the caller's email to that organization with that role — `SECURITY DEFINER`, for the same recursion reason (the `memberships` INSERT policy reads `invitations`, whose policies read `memberships`) |
 | `app_private.has_active_role(org_id, roles[])` | Whether the caller holds an *active* membership in the organization with one of the given roles — `SECURITY DEFINER`, same reason as `is_active_member`. For role-aware policies (owner-only patient archive; Milestone 4 clinical notes). Re-derives the role from `memberships`; never reads a role from the application |
+| `app_private.is_active_clinician(org_id, member_id)` | Whether `member_id` — not necessarily the caller — is an *active* `owner`/`psychologist` of the organization. Used by the appointments policies so `admin_staff` (or a suspended member) can never be booked as the professional. `SECURITY DEFINER`; returns only a boolean about a member of an organization the caller already sees |
 
 `rls-helpers.sql` sets `check_function_bodies = off`, so it can — and must —
 run **before** the Prisma migrations on a fresh database: the migrations'
@@ -263,7 +264,7 @@ prevents exploitation on its own).
 ### Organization scoping — tenant tables
 
 The pattern below is the template for every tenant table. **`patients`
-(Milestone 2) is the first table built on it** — its real policies are split
+(Milestone 2) and `appointments` (Milestone 3) are built on it** — its real policies are split
 per command (SELECT / INSERT / UPDATE, no DELETE) because inserts must also pin
 `created_by` to the caller and updates are role-aware for archived rows
 (ADR-0014); see the `20261115100000_patients` migration. Note it carries

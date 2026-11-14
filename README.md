@@ -131,13 +131,14 @@ IPv6-only, which is why both use the pooler.
 | `pnpm --filter @psych/db run generate` | Regenerates the Prisma client |
 
 Database work that Prisma structurally cannot do — anything touching
-Supabase's `auth` schema, and the RLS helper functions that must be owned by
-an RLS-bypassing role — lives in `packages/db/sql/` and is applied with the
-privileged connection, e.g.:
+Supabase's `auth` schema, Postgres extensions, and the RLS helper functions
+that must be owned by an RLS-bypassing role — lives in `packages/db/sql/` and
+is applied with the privileged connection, in this order:
 
 ```bash
+supabase db query --remote --yes --file packages/db/sql/extensions.sql    # btree_gist (appointment conflicts)
 supabase db query --remote --yes --file packages/db/sql/rls-helpers.sql
-pnpm --filter @psych/db run migrate:deploy   # always AFTER rls-helpers.sql
+pnpm --filter @psych/db run migrate:deploy   # always AFTER both scripts
 ```
 
 See [ADR-0011](docs/decisions/0011-profiles-auth-fk-via-privileged-connection.md)
@@ -175,8 +176,8 @@ whenever a tenant policy changes; it caught a real hole once already.
 
 | Job | What it guarantees | Blocking |
 |---|---|---|
-| `check` | lint (incl. en/es translation-catalog parity), typecheck (with Next's generated route types), 80 unit tests, production build | yes |
-| `integration` | 113 tests against a real Postgres built exactly like production (roles, RLS helpers, every migration): tenant isolation at the API **and** RLS-only layers, auth, invitations, patients (incl. owner-only archive enforced by RLS); then **schema drift** — `schema.prisma` must match what the migrations produce | yes |
+| `check` | lint (incl. en/es translation-catalog parity), typecheck (with Next's generated route types), 88 unit tests, production build | yes |
+| `integration` | 174 tests against a real Postgres built exactly like production (roles, RLS helpers, every migration): tenant isolation at the API **and** RLS-only layers, auth, invitations, patients (incl. owner-only archive enforced by RLS), appointments (incl. double-booking refused by the database itself); then **schema drift** — `schema.prisma` must match what the migrations produce | yes |
 | `audit` | `pnpm audit --prod --audit-level high` (production dependencies); a full audit is reported but not blocking | prod: yes |
 
 **`main` is protected** by a repository ruleset: no direct pushes, no force

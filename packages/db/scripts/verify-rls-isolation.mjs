@@ -128,6 +128,23 @@ try {
     deleteDenied = /permission denied/.test(String(error));
   }
   check('nobody can delete patients (no DELETE grant)', deleteDenied);
+
+  // Appointments (Milestone 3).
+  const ownerAppointments = await asUserInOrg(userA, orgOfA, (tx) => tx.appointment.count());
+  check('owner can read their own organization appointments', true, `${ownerAppointments} rows visible to the owner`);
+
+  const strangerAppointments = await asUserInOrg(userB, orgOfA, (tx) =>
+    tx.appointment.count({ where: { organizationId: orgOfA } }),
+  );
+  check('stranger claiming the organization reads none of its appointments', strangerAppointments === 0, `${strangerAppointments} rows`);
+
+  let appointmentDeleteDenied = false;
+  try {
+    await asUserInOrg(userA, orgOfA, (tx) => tx.appointment.deleteMany({ where: { id: '00000000-0000-4000-8000-000000000000' } }));
+  } catch (error) {
+    appointmentDeleteDenied = /permission denied/.test(String(error));
+  }
+  check('nobody can delete appointments (no DELETE grant)', appointmentDeleteDenied);
 } finally {
   await prisma.$disconnect();
 }

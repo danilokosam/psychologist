@@ -23,6 +23,7 @@ Status is one of `Proposed`, `Accepted`, `Superseded`, `Deprecated`.
 | [0012](0012-rls-gates-on-verified-membership.md) | Tenant policies gate on verified membership, via private SECURITY DEFINER helpers | Accepted |
 | [0013](0013-organization-invitations.md) | Organization invitations: link token bound to the invitee's verified email | Accepted |
 | [0014](0014-patients-archived-not-deleted.md) | Patients are archived, never deleted; archiving is owner-only down to RLS | Accepted |
+| [0015](0015-appointment-conflicts-per-organization.md) | Double-booking prevented by database exclusion constraints, scoped per organization | Accepted |
 
 When a decision here needs to change, add a new ADR that supersedes the old
 one and update its status — don't silently edit history.

@@ -25,7 +25,7 @@
   },
   "dashboard": {
     "title": "Panel",
-    "emptyState": "Las citas, sesiones y pagos llegan en próximos hitos.",
+    "emptyState": "Las sesiones y los pagos llegan en próximos hitos.",
     "defaultPracticeName": "Mi consulta",
     "loading": "Cargando tu cuenta...",
     "loadFailed": "No se pudo cargar tu cuenta: {message}",
@@ -34,7 +34,8 @@
     "role": "Rol",
     "signOut": "Cerrar sesión",
     "organizationOption": "{name} — {role}",
-    "patientsLink": "Pacientes"
+    "patientsLink": "Pacientes",
+    "calendarLink": "Agenda"
   },
   "roles": {
     "owner": "Titular",
@@ -132,5 +133,76 @@
     "archivedDone": "Paciente archivado.",
     "restoredDone": "Paciente restaurado.",
     "actionFailed": "No se pudo completar la acción. Recarga la página e inténtalo de nuevo."
+  },
+  "appointments": {
+    "title": "Agenda",
+    "new": "Nueva cita",
+    "book": "Reservar cita",
+    "backToDashboard": "← Panel",
+    "backToCalendar": "← Agenda",
+    "loading": "Cargando...",
+    "loadFailed": "No se pudieron cargar las citas.",
+    "notFound": "Esta cita no existe o no pertenece a esta consulta.",
+    "view": "Vista",
+    "views": {
+      "day": "Día",
+      "week": "Semana",
+      "month": "Mes"
+    },
+    "previous": "Anterior",
+    "today": "Hoy",
+    "next": "Siguiente",
+    "professional": "Profesional",
+    "allProfessionals": "Todos los profesionales",
+    "unknownProfessional": "(antiguo miembro)",
+    "chooseProfessional": "Elige un profesional",
+    "modality": {
+      "in_person": "Presencial",
+      "online": "Online"
+    },
+    "status": {
+      "scheduled": "Programada",
+      "confirmed": "Confirmada",
+      "completed": "Realizada",
+      "cancelled": "Cancelada",
+      "no_show": "No asistió"
+    },
+    "emptyDay": "No hay citas este día.",
+    "newOnThisDay": "Reservar una cita este día",
+    "more": "+{count} más",
+    "patient": "Paciente",
+    "changePatient": "Cambiar",
+    "searchPatient": "Busca un paciente por nombre, email o teléfono",
+    "noPatientMatches": "Ningún paciente coincide (los archivados no se pueden citar).",
+    "date": "Fecha",
+    "time": "Hora de inicio",
+    "duration": "Duración",
+    "minutes": "{count} min",
+    "modalityLabel": "Modalidad",
+    "statusLabel": "Estado",
+    "save": "Guardar cambios",
+    "saving": "Guardando...",
+    "saved": "Cambios guardados.",
+    "showInCalendar": "Ver en la agenda",
+    "cancelAppointment": "Cancelar cita",
+    "cancelConfirm": "¿Cancelar esta cita? No se puede deshacer.",
+    "cancelYes": "Sí, cancelarla",
+    "keep": "Mantenerla",
+    "cancelledDone": "Cita cancelada. Su hueco vuelve a estar libre.",
+    "cancelledFinal": "Esta cita se canceló y ya no se puede modificar. Reserva una nueva si hace falta.",
+    "upcoming": "Próximas citas",
+    "noUpcoming": "No hay próximas citas.",
+    "errors": {
+      "PROFESSIONAL_CONFLICT": "El profesional ya tiene una cita a esa hora.",
+      "PATIENT_CONFLICT": "El paciente ya tiene una cita a esa hora.",
+      "INVALID_TIME_RANGE": "La cita debe terminar después de empezar y durar como máximo 12 horas.",
+      "INVALID_PROFESSIONAL": "Esa persona no puede ser el profesional: elige un propietario o psicólogo activo.",
+      "INVALID_PATIENT": "Ese paciente no pertenece a esta consulta.",
+      "PATIENT_ARCHIVED": "Ese paciente está archivado. Un propietario debe restaurarlo antes de reservar.",
+      "NOT_YET_HAPPENED": "Solo se puede marcar como realizada o no asistida una cita que ya ha empezado.",
+      "APPOINTMENT_CANCELLED": "Esta cita se canceló y ya no se puede modificar.",
+      "incomplete": "Elige un paciente, un profesional, una fecha y una hora.",
+      "generic": "Algo salió mal. Recarga la página e inténtalo de nuevo."
+    }
   }
 }

@@ -66,3 +66,32 @@ export type {
   PatientStatus,
   UpdatePatientRequest,
 } from './patients';
+
+export {
+  APPOINTMENTS_MAX_WINDOW_DAYS,
+  APPOINTMENT_MAX_HOURS,
+  appointmentModalitySchema,
+  appointmentResponseSchema,
+  appointmentSchema,
+  appointmentStatusSchema,
+  createAppointmentRequestSchema,
+  editableAppointmentStatusSchema,
+  listAppointmentsQuerySchema,
+  listAppointmentsResponseSchema,
+  listMembersResponseSchema,
+  organizationMemberSchema,
+  updateAppointmentRequestSchema,
+} from './appointments';
+export type {
+  Appointment,
+  AppointmentModality,
+  AppointmentResponse,
+  AppointmentStatus,
+  CreateAppointmentRequest,
+  EditableAppointmentStatus,
+  ListAppointmentsQuery,
+  ListAppointmentsResponse,
+  ListMembersResponse,
+  OrganizationMember,
+  UpdateAppointmentRequest,
+} from './appointments';

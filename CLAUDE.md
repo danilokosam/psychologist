@@ -88,6 +88,9 @@ care about this setting.
 category of hand-run SQL, applied with the privileged connection
 (`supabase db query --remote --yes --file ...`), for the two things Prisma /
 `app_migrator` structurally cannot do:
+- `extensions.sql` — `btree_gist` in the `extensions` schema (appointment
+  exclusion constraints, [ADR-0015](docs/decisions/0015-appointment-conflicts-per-organization.md)).
+  Run it first: `extensions.sql` → `rls-helpers.sql` → `migrate:deploy`.
 - `profiles-auth-fk.sql` — the FK into Supabase's `auth.users` ([ADR-0011](docs/decisions/0011-profiles-auth-fk-via-privileged-connection.md))
 - `rls-helpers.sql` — the `app_private` identity/membership helpers every
   policy uses, which must be owned by an RLS-bypassing role ([ADR-0012](docs/decisions/0012-rls-gates-on-verified-membership.md)).
@@ -259,9 +262,10 @@ them one at a time — each must be up to date with `main` and green.
 
 ## Current milestone and status
 
-**Milestones 0, 1 and 2 are COMPLETE.** Milestone 2 (F-005 patients) is
-applied to Supabase and verified in the browser. **Milestone 3
-(Appointments) is next and has not been started.** Track per-feature status
+**Milestones 0–3 are COMPLETE.** Milestone 3 (F-006 calendar, F-007
+conflict prevention) is applied to Supabase and verified in the browser.
+**Milestone 4 (Clinical sessions & notes) is next and has not been
+started.** Track per-feature status
 in `docs/FEATURES.md`, not here.
 
 Every org-scoped route is `requireAuth → resolveOrganization →
@@ -271,8 +275,8 @@ hand-typed role list — add or reuse an entry in
 `SECURITY.md` matrix).
 
 What exists and is verified end to end:
-- pnpm monorepo, shared TS/ESLint config, protected `main` + GitHub Actions CI: 80 unit tests
-  (`pnpm test`) + 113 integration tests (`pnpm db:test:up && pnpm test:integration`).
+- pnpm monorepo, shared TS/ESLint config, protected `main` + GitHub Actions CI: 88 unit tests
+  (`pnpm test`) + 174 integration tests (`pnpm db:test:up && pnpm test:integration`).
 - **Integration harness** (`apps/api/test/integration/`): throwaway Postgres
   17 in Docker (`docker-compose.test.yml`, 127.0.0.1 only, tmpfs), built like
   production — roles, `rls-helpers.sql`, every migration — with the API as
@@ -318,11 +322,20 @@ What exists and is verified end to end:
   explicit field allow-lists, page-based pagination (`docs/API.md`).
   Prisma's `contains` does **not** escape LIKE wildcards — escape them
   (see the patients adapter).
+- **Appointments** ([ADR-0015](docs/decisions/0015-appointment-conflicts-per-organization.md)):
+  double-booking is refused by two GiST exclusion constraints **scoped per
+  organization** (a cross-organization check would leak another tenant's
+  schedule through the error). No app-level overlap pre-check — the
+  constraint is the single source of truth, mapped to 409. Cancelled is
+  final, nothing is deleted, the patient never changes, only an active
+  owner/psychologist can be the professional (`is_active_clinician`). A
+  failed statement aborts the transaction: translate the error, don't
+  continue querying in it. The calendar UI uses the browser's time zone.
 - Read-then-write account operations (bootstrap, accepting an invitation)
   take a per-user transaction-scoped advisory lock (`lockAccount`) first —
   copy that pattern for any future "create if missing" flow.
 
-What does **not** exist: appointments, clinical sessions,
+What does **not** exist: clinical sessions,
 clinical notes, payments, dashboard metrics, password recovery UI, membership
 removal/role changes, email delivery of invitations, and any deployment. Full
 detail: `docs/ROADMAP.md`. **Work proceeds feature by feature, within one
@@ -360,6 +373,7 @@ because they will bite again:
 13. **No real patient data before the Milestone 6 legal/DPO review is complete**, and no part of this system should be described as making the product "GDPR-compliant" outright.
 14. Invitations require **both** the one-time link token (stored only as a hash, carried in the URL fragment) **and** the invitee's verified email; `owner` is never invitable; invitations are revoked, never deleted. See [ADR-0013](docs/decisions/0013-organization-invitations.md).
 15. Patients are **archived, never deleted** through the application; archiving is owner-only in RLS too. Hard erasure waits for the Milestone 6 legal review. See [ADR-0014](docs/decisions/0014-patients-archived-not-deleted.md).
+16. Appointment double-booking is prevented by database exclusion constraints, **scoped per organization**; appointments are cancelled, never deleted. See [ADR-0015](docs/decisions/0015-appointment-conflicts-per-organization.md).
 
 Full rationale and alternatives considered for each: `docs/decisions/`.
 

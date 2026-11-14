@@ -89,6 +89,24 @@ belong to yet — e.g. Mallory into Consulta Diego).
 | Patient | Organization | State as left |
 |---|---|---|
 | José Sintético Pérez (TEST) — id `44f62aef-b0f0-4982-9ec4-facaf09bc253` | Consulta Ana (TEST) | `inactive`; has been archived and restored once (browser pass 2026-11-14) |
+| Lucía Sintética Gómez (TEST) — id `b3e49c2c-3b98-4687-a41d-b77a987056c8` | Consulta Ana (TEST) | `active` (Milestone 3 browser pass) |
+
+## Synthetic appointments (Milestone 3)
+
+All in Consulta Ana (TEST), Monday 2026-11-16 / Tuesday 2026-11-17 (times
+shown in Madrid time):
+
+| Appointment | State as left |
+|---|---|
+| José with Bruno, Mon 16 10:00–10:50 — id `f962db1b-0e46-4853-b0fe-9ed894e2b0e1` | `scheduled` — the slot that refused Lucía at 10:30 (professional conflict) and José with Ana at 10:15 (patient conflict) |
+| Lucía, Mon 16 10:00 with Ana (rescheduled from 10:50 with Bruno) | `cancelled` |
+| Lucía with Bruno, Tue 17 10:00 (booked and cancelled by Carla) | `cancelled` |
+
+Good for: conflict checks against José's slot; Carla gets `422
+INVALID_PROFESSIONAL` when she puts herself as the professional; Mallory gets
+`404` for any of these and `422 INVALID_PATIENT` booking José into her own
+practice. Once 2026-11-16 has passed, José's appointment can be marked
+`completed` / `no_show` (before that: `422 NOT_YET_HAPPENED`).
 
 Good for: Carla (`admin_staff`) can edit it but gets `403` on archive/restore;
 Mallory gets `404` for it under any organization header; Ana can archive

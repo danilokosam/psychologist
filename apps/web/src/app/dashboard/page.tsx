@@ -29,6 +29,12 @@ export default function DashboardPage() {
         >
           {t('patientsLink')}
         </Link>
+        <Link
+          href="/appointments"
+          className="block rounded border border-zinc-200 bg-white p-4 font-medium underline dark:border-zinc-800 dark:bg-zinc-900"
+        >
+          {t('calendarLink')}
+        </Link>
         <AccountPanel />
       </div>
     </main>
