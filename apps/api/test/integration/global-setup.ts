@@ -10,7 +10,7 @@ import type { TestProject } from 'vitest/node';
  *
  * Database: drops and recreates `psych_test` on the throwaway container from
  * docker-compose.test.yml, then applies exactly what the real project has --
- * the app_private helpers, every Prisma migration (run as app_migrator), and
+ * the extensions, the app_private helpers, every Prisma migration (run as app_migrator), and
  * the app_migrator/app_runtime roles. The API under test connects as
  * app_runtime, so RLS applies exactly as it does in production.
  *
@@ -73,6 +73,7 @@ function prepareDatabase() {
   );
 
   // Same order a from-scratch rebuild of the real project uses.
+  sqlFile(testAdminUrl, path.join(dbPackage, 'sql/extensions.sql'));
   sqlFile(testAdminUrl, path.join(dbPackage, 'sql/rls-helpers.sql'));
   execFileSync(prismaBin, ['migrate', 'deploy'], {
     cwd: dbPackage,

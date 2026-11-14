@@ -65,7 +65,7 @@ export async function makeUser(label: string): Promise<TestUser> {
 /** Wipes all tenant data between test files. Privileged on purpose. */
 export async function resetDatabase() {
   await adminDb.$executeRawUnsafe(
-    'TRUNCATE TABLE patients, invitations, memberships, organizations, profiles RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE appointments, patients, invitations, memberships, organizations, profiles RESTART IDENTITY CASCADE',
   );
 }
 
@@ -105,6 +105,8 @@ export async function inviteMember(
   const accepted = await request(app)
     .post('/invitations/accept')
     .set('Authorization', `Bearer ${user.token}`)
-    .send({ token: created.body.token });
+    // Named like bootstrapUser's users ("Synthetic <label>"), recovered from
+    // makeUser's "<label>-<8 hex>@example.test" address.
+    .send({ token: created.body.token, fullName: `Synthetic ${user.email.replace(/-[0-9a-f]{8}@.*$/, '')}` });
   if (accepted.status !== 200) throw new Error(`seeding ${role} failed: ${accepted.status}`);
 }

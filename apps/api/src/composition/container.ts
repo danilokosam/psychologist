@@ -14,6 +14,18 @@ import {
   listInvitations,
   revokeInvitation,
 } from '../modules/organizations/application/use-cases/manage-invitations';
+import { PrismaMemberDirectory } from '../modules/organizations/infrastructure/prisma-member-directory';
+import { listMembers } from '../modules/organizations/application/use-cases/list-members';
+import { PrismaAppointmentRepository } from '../modules/appointments/infrastructure/prisma-appointment-repository';
+import { scheduleAppointment } from '../modules/appointments/application/use-cases/schedule-appointment';
+import {
+  cancelAppointment,
+  changeAppointment,
+} from '../modules/appointments/application/use-cases/change-appointment';
+import {
+  getAppointment,
+  listAppointments,
+} from '../modules/appointments/application/use-cases/read-appointments';
 import { PrismaPatientRepository } from '../modules/patients/infrastructure/prisma-patient-repository';
 import { createPatient } from '../modules/patients/application/use-cases/create-patient';
 import { getPatient, listPatients } from '../modules/patients/application/use-cases/read-patients';
@@ -49,6 +61,7 @@ export function buildOrganizationsModule(tx: Tx) {
   const invitations = new PrismaInvitationRepository(tx);
   const accounts = new PrismaAccountRepository(tx);
   const tokens = cryptoInvitationTokens;
+  const members = new PrismaMemberDirectory(tx);
 
   return {
     createInvitation: (input: Parameters<typeof createInvitation>[0]) =>
@@ -59,6 +72,7 @@ export function buildOrganizationsModule(tx: Tx) {
       revokeInvitation(input, { invitations }),
     acceptInvitation: (input: Parameters<typeof acceptInvitation>[0]) =>
       acceptInvitation(input, { invitations, accounts, tokens }),
+    listMembers: (input: Parameters<typeof listMembers>[0]) => listMembers(input, { members }),
   };
 }
 
@@ -73,5 +87,22 @@ export function buildPatientsModule(tx: Tx) {
     updatePatient: (input: Parameters<typeof updatePatient>[0]) => updatePatient(input, { patients }),
     archivePatient: (input: Parameters<typeof archivePatient>[0]) => archivePatient(input, { patients }),
     restorePatient: (input: Parameters<typeof restorePatient>[0]) => restorePatient(input, { patients }),
+  };
+}
+
+/** Appointments (F-006/F-007, ADR-0015). Same request-scoped factory pattern as above. */
+export function buildAppointmentsModule(tx: Tx) {
+  const appointments = new PrismaAppointmentRepository(tx);
+
+  return {
+    scheduleAppointment: (input: Parameters<typeof scheduleAppointment>[0]) =>
+      scheduleAppointment(input, { appointments }),
+    changeAppointment: (input: Parameters<typeof changeAppointment>[0]) =>
+      changeAppointment(input, { appointments }),
+    cancelAppointment: (input: Parameters<typeof cancelAppointment>[0]) =>
+      cancelAppointment(input, { appointments }),
+    getAppointment: (input: Parameters<typeof getAppointment>[0]) => getAppointment(input, { appointments }),
+    listAppointments: (input: Parameters<typeof listAppointments>[0]) =>
+      listAppointments(input, { appointments }),
   };
 }
