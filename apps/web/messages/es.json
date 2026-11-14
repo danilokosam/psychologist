@@ -1,7 +1,7 @@
 {
   "home": {
     "title": "Gestión de Consulta de Psicología",
-    "subtitle": "Hito 0 — fundación del proyecto",
+    "subtitle": "Pacientes, agenda e historia clínica para consultas de psicología, pensado para la privacidad europea.",
     "apiStatusLabel": "Estado de la API",
     "apiStatusChecking": "Comprobando...",
     "apiStatusOk": "Conectado (última comprobación: {timestamp})",
@@ -32,10 +32,11 @@
     "signedInAs": "Sesión iniciada como",
     "practice": "Consulta",
     "role": "Rol",
-    "signOut": "Cerrar sesión",
     "organizationOption": "{name} — {role}",
     "patientsLink": "Pacientes",
-    "calendarLink": "Agenda"
+    "calendarLink": "Agenda",
+    "patientsHint": "Fichas, búsqueda y archivo",
+    "calendarHint": "Vista de día, semana y mes"
   },
   "roles": {
     "owner": "Titular",
@@ -138,7 +139,6 @@
     "title": "Agenda",
     "new": "Nueva cita",
     "book": "Reservar cita",
-    "backToDashboard": "← Panel",
     "backToCalendar": "← Agenda",
     "loading": "Cargando...",
     "loadFailed": "No se pudieron cargar las citas.",
@@ -204,5 +204,19 @@
       "incomplete": "Elige un paciente, un profesional, una fecha y una hora.",
       "generic": "Algo salió mal. Recarga la página e inténtalo de nuevo."
     }
+  },
+  "nav": {
+    "brand": "Consulta Psicológica",
+    "label": "Principal",
+    "dashboard": "Panel",
+    "patients": "Pacientes",
+    "calendar": "Agenda",
+    "signOut": "Cerrar sesión"
+  },
+  "theme": {
+    "label": "Tema",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "system": "Sistema"
   }
 }

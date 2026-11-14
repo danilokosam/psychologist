@@ -1,7 +1,7 @@
 {
   "home": {
     "title": "Psychology Practice Management",
-    "subtitle": "Milestone 0 — project foundation",
+    "subtitle": "Patients, calendar and clinical records for psychology practices — built for EU privacy expectations.",
     "apiStatusLabel": "API status",
     "apiStatusChecking": "Checking...",
     "apiStatusOk": "Connected (last check: {timestamp})",
@@ -32,10 +32,11 @@
     "signedInAs": "Signed in as",
     "practice": "Practice",
     "role": "Role",
-    "signOut": "Sign out",
     "organizationOption": "{name} — {role}",
     "patientsLink": "Patients",
-    "calendarLink": "Calendar"
+    "calendarLink": "Calendar",
+    "patientsHint": "Records, search and archive",
+    "calendarHint": "Day, week and month views"
   },
   "roles": {
     "owner": "Owner",
@@ -138,7 +139,6 @@
     "title": "Calendar",
     "new": "New appointment",
     "book": "Book appointment",
-    "backToDashboard": "← Dashboard",
     "backToCalendar": "← Calendar",
     "loading": "Loading...",
     "loadFailed": "Could not load appointments.",
@@ -204,5 +204,19 @@
       "incomplete": "Choose a patient, a professional, a date and a time.",
       "generic": "Something went wrong. Reload the page and try again."
     }
+  },
+  "nav": {
+    "brand": "Psychology Practice",
+    "label": "Main",
+    "dashboard": "Dashboard",
+    "patients": "Patients",
+    "calendar": "Calendar",
+    "signOut": "Sign out"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
   }
 }
