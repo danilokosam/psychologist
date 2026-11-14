@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PROTECTED_PREFIXES = ['/dashboard', '/patients', '/appointments'];
+const PROTECTED_PREFIXES = ['/dashboard', '/patients', '/appointments', '/clinical-sessions'];
 
 /**
  * Next.js proxy (formerly the "middleware" file convention, renamed in

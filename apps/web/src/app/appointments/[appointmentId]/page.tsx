@@ -23,6 +23,7 @@ export default function AppointmentPage({ params }: PageProps<'/appointments/[ap
               key={`${active.organizationId}:${appointmentId}`}
               organizationId={active.organizationId}
               appointmentId={appointmentId}
+              role={active.role}
             />
           )}
         </WithActiveOrganization>

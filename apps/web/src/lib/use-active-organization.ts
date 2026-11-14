@@ -8,7 +8,8 @@ import { setLocaleCookie } from './locale';
 import { apiFetch } from './api-client';
 import { getStoredActiveOrganization, setStoredActiveOrganization } from './active-organization';
 
-export type ActiveOrganization = { organizationId: string; name: string; role: MembershipRole };
+/** `userId` is the signed-in user -- e.g. to tell "my" clinical note from a colleague's. */
+export type ActiveOrganization = { organizationId: string; name: string; role: MembershipRole; userId: string };
 
 export type ActiveOrganizationState =
   | { kind: 'loading' }
@@ -58,7 +59,12 @@ export function useActiveOrganization(): ActiveOrganizationState {
       setStoredActiveOrganization(chosen.organizationId);
       return {
         kind: 'ready',
-        active: { organizationId: chosen.organizationId, name: current.organization.name, role: current.role },
+        active: {
+          organizationId: chosen.organizationId,
+          name: current.organization.name,
+          role: current.role,
+          userId: account.profile.id,
+        },
       };
     }
 

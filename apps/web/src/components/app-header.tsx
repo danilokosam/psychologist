@@ -23,7 +23,9 @@ export function AppHeader() {
   const t = useTranslations('nav');
   const pathname = usePathname();
   const router = useRouter();
-  const signedInArea = SECTIONS.some((s) => pathname.startsWith(s.href));
+  // Clinical sessions live under a patient, so they count as signed-in area
+  // and highlight "Patients" in the navigation.
+  const signedInArea = [...SECTIONS.map((s) => s.href), '/clinical-sessions'].some((p) => pathname.startsWith(p));
 
   async function signOut() {
     await createSupabaseBrowserClient().auth.signOut();
@@ -43,7 +45,9 @@ export function AppHeader() {
         {signedInArea ? (
           <nav aria-label={t('label')} className="order-last flex w-full items-center gap-1 sm:order-none sm:w-auto">
             {SECTIONS.map((section) => {
-              const active = pathname.startsWith(section.href);
+              const active =
+                pathname.startsWith(section.href) ||
+                (section.href === '/patients' && pathname.startsWith('/clinical-sessions'));
               return (
                 <Link
                   key={section.href}

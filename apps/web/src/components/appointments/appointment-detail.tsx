@@ -3,17 +3,26 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useFormatter, useTranslations } from 'next-intl';
-import { appointmentResponseSchema, type Appointment } from '@psych/types';
+import { appointmentResponseSchema, type Appointment, type MembershipRole } from '@psych/types';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { toDateInput } from '@/lib/calendar';
 import { AppointmentForm, appointmentErrorKey, type AppointmentFormValues } from './appointment-form';
 import { ui } from '@/lib/ui';
 import { Alert, APPOINTMENT_STATUS_TONE, Badge, Spinner } from '../ui/feedback';
+import { AppointmentSessionLink } from '../clinical/appointment-session-link';
 
 type State = { kind: 'loading' } | { kind: 'ready'; appointment: Appointment } | { kind: 'not_found' } | { kind: 'error' };
 
 /** View, reschedule/edit and cancel one appointment (any role, per the matrix). */
-export function AppointmentDetail({ organizationId, appointmentId }: { organizationId: string; appointmentId: string }) {
+export function AppointmentDetail({
+  organizationId,
+  appointmentId,
+  role,
+}: {
+  organizationId: string;
+  appointmentId: string;
+  role: MembershipRole;
+}) {
   const t = useTranslations('appointments');
   const format = useFormatter();
   const [state, setState] = useState<State>({ kind: 'loading' });
@@ -94,9 +103,12 @@ export function AppointmentDetail({ organizationId, appointmentId }: { organizat
           <Badge tone={APPOINTMENT_STATUS_TONE[appointment.status]}>{t(`status.${appointment.status}`)}</Badge>
           {appointment.professional.fullName ?? t('unknownProfessional')} · {t(`modality.${appointment.modality}`)}
         </p>
-        <Link href={`/appointments?view=day&date=${toDateInput(start)}`} className={`${ui.link} text-sm`}>
-          {t('showInCalendar')}
-        </Link>
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <AppointmentSessionLink organizationId={organizationId} appointment={appointment} role={role} />
+          <Link href={`/appointments?view=day&date=${toDateInput(start)}`} className={`${ui.link} text-sm`}>
+            {t('showInCalendar')}
+          </Link>
+        </div>
       </div>
 
       {message ? <Alert tone={message.tone === 'error' ? 'danger' : 'success'}>{t(message.key)}</Alert> : null}
