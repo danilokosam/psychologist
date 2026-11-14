@@ -19,6 +19,7 @@ export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mode, setMode] = useState<Mode>('signIn');
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
@@ -35,7 +36,15 @@ export function LoginForm() {
     const result =
       mode === 'signIn'
         ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
+        : await supabase.auth.signUp({
+            email,
+            password,
+            // Kept in Supabase's user_metadata until the first sign-in, when
+            // /auth/bootstrap copies it into profiles.full_name (see
+            // fullNameFromSession). With email confirmation on there is no
+            // session yet at this point, so it can't be sent to the API now.
+            options: { data: { full_name: fullName.trim() } },
+          });
 
     if (result.error) {
       setError(result.error.message);
@@ -56,6 +65,23 @@ export function LoginForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
+      {mode === 'signUp' ? (
+        <div className="space-y-1">
+          <label htmlFor="full-name" className="block text-sm font-medium">
+            {t('fullName')}
+          </label>
+          <input
+            id="full-name"
+            type="text"
+            required
+            maxLength={200}
+            autoComplete="name"
+            value={fullName}
+            onChange={(event) => setFullName(event.target.value)}
+            className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+          />
+        </div>
+      ) : null}
       <div className="space-y-1">
         <label htmlFor="email" className="block text-sm font-medium">
           {t('email')}

@@ -18,7 +18,8 @@
     "pending": "Un momento...",
     "switchToSignUp": "¿No tienes cuenta? Crea una",
     "switchToSignIn": "¿Ya tienes cuenta? Inicia sesión",
-    "checkYourEmail": "Revisa tu correo para confirmar la cuenta."
+    "checkYourEmail": "Revisa tu correo para confirmar la cuenta.",
+    "fullName": "Nombre completo"
   },
   "dashboard": {
     "title": "Panel",
