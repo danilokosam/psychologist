@@ -1,27 +1,47 @@
 name: CI
 
+# Runs on every pull request and on main. `main` is protected by a ruleset
+# that requires the `check`, `integration` and `audit` jobs below to pass
+# before anything can be merged -- see the "CI/CD" section in README.md.
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
+# Least privilege: CI only ever reads the repository.
+permissions:
+  contents: read
+
+# A new push to a PR supersedes the run for its previous commit. Never
+# cancel runs on main, so every commit on main keeps a complete result.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Third-party actions are pinned to full commit SHAs (a tag can be moved to
+# different code; a SHA cannot). Dependabot keeps the pins current.
 jobs:
   check:
+    name: check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: 11.20.0
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      # pnpm's version comes from package.json `packageManager` -- one source of truth.
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
 
+      # Includes the en/es translation-catalog parity check (apps/web).
       - run: pnpm run lint
       - run: pnpm run typecheck
       - run: pnpm run test
@@ -30,8 +50,11 @@ jobs:
   # Database-backed tests: real Postgres, real RLS, real token verification
   # (against a JWKS endpoint the suite serves itself). Throwaway service
   # container and synthetic data only -- no Supabase credentials in CI.
+  # Also fails if schema.prisma and the migrations have drifted apart.
   integration:
+    name: integration
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:17-alpine
@@ -46,14 +69,15 @@ jobs:
           --health-retries 20
     env:
       TEST_ADMIN_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DRIFT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/psych_test
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          version: 11.20.0
+          persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
@@ -61,3 +85,28 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm run test:integration
+
+  # Known vulnerabilities in dependencies. Blocking for production
+  # dependencies at high/critical; everything else is reported, not blocking
+  # (dev tooling never ships), and Dependabot proposes the upgrades.
+  audit:
+    name: audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Production dependencies (blocking at high)
+        run: pnpm audit --prod --audit-level high
+
+      - name: All dependencies (informational)
+        run: pnpm audit
+        continue-on-error: true
