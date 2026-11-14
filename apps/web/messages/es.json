@@ -19,7 +19,9 @@
     "switchToSignUp": "¿No tienes cuenta? Crea una",
     "switchToSignIn": "¿Ya tienes cuenta? Inicia sesión",
     "checkYourEmail": "Revisa tu correo para confirmar la cuenta.",
-    "fullName": "Nombre completo"
+    "fullName": "Nombre completo",
+    "passwordRule": "Mínimo 10 caracteres, con mayúsculas, minúsculas, un número y un símbolo.",
+    "weakPassword": "La contraseña es demasiado débil. Usa al menos 10 caracteres, con mayúsculas, minúsculas, un número y un símbolo."
   },
   "dashboard": {
     "title": "Panel",

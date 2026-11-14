@@ -99,8 +99,11 @@ Follow-ups, done after the merge (2026-11-14):
 - [x] Dependency vulnerabilities: 18 → 2 (both dev-only lint tooling). zod 3 → 4 (a DoS in input validation), vitest 2 → 4, `deepmerge-ts` overridden to 8 (via Prisma's CLI).
 
 Still open:
-- Supabase Auth **leaked-password protection** (HaveIBeenPwned check) is off — the remaining `supabase db advisors` finding. **Blocked by the plan:** it is a Pro-plan feature and the project is on the Free plan (confirmed 2026-11-14 — the dashboard refuses the toggle). It cannot be set from the CLI either (not in the CLI's config schema). Acceptable while only synthetic test accounts exist; decided at Milestone 6 (see there).
+- Supabase Auth **leaked-password protection** (HaveIBeenPwned check) is off — the remaining `supabase db advisors` finding. **Blocked by the plan:** it is a Pro-plan feature and the project is on the Free plan (confirmed 2026-11-14 — the dashboard refuses the toggle). It cannot be set from the CLI either (not in the CLI's config schema). Acceptable while only synthetic test accounts exist; decided at Milestone 6 (see there). **Compensating control applied:** password policy raised to min 10 chars with lower/upper/digit/symbol (was 6, no requirements) — see `docs/SECURITY.md`.
 - Sign-up page heading still says "Sign in" in sign-up mode (cosmetic).
+- **TypeScript 7** fails typecheck and the integration suite (Dependabot PR #3, closed). Needs a planned migration; TS majors are ignored by Dependabot until then.
+
+Dependabot's first batch (2026-11-14): merged #2 (7 minor/patch: Next 16.4.6, React 19.3.1, next-intl 4.15, typescript-eslint), #4 (`@types/supertest` 7), #6 (ESLint 10) — each through green CI on a branch up to date with `main`. Closed #3 (TypeScript 7, CI red) and #5 (`@types/node` 26 ≠ our Node 22 runtime); both ignored in `.github/dependabot.yml`. `apps/web` was also on `@types/node` 20 — aligned to 22.
 
 
 

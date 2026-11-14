@@ -16,6 +16,15 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Types must describe the Node we actually run (.nvmrc = 22). Bump this
+      # together with .nvmrc, never on its own (closed PR #5).
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
+      # TypeScript 7 fails typecheck + integration here (closed PR #3): it
+      # needs a planned migration, not a dependency bump. See docs/ROADMAP.md.
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
     groups:
       # Minor/patch updates batched into one PR; majors stay separate so each
       # can be reviewed (and migrated, if needed) on its own.
