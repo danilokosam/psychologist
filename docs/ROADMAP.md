@@ -128,9 +128,20 @@ Dependabot's first batch (2026-11-14): merged #2 (7 minor/patch: Next 16.4.6, Re
   (ADR-0014).
 
 ### Milestone 3 — Appointments / Calendar
-**Status: NOT STARTED**
+**Status: COMPLETED** (2026-11-14)
 - CRUD, day/week/month views, both exclusion constraints (professional and patient overlap).
 - **DoD:** no double-booking possible even via a direct DB insert (test bypasses the app layer to prove it).
+- **Delivered:** F-006 + F-007 — `appointments` with per-organization
+  exclusion constraints ([ADR-0015](decisions/0015-appointment-conflicts-per-organization.md)),
+  RLS (clinician-only professional, no booking archived patients, cancelled
+  is final, no DELETE), `/appointments` API, members endpoint, day/week/month
+  calendar in en/es. Applied to Supabase (`sql/extensions.sql` added);
+  `verify-rls-isolation.mjs` 13/13 live.
+- **Follow-ups (not blocking):** a per-organization time zone (the calendar
+  uses the browser's); a personal cross-practice view for professionals in
+  several organizations (ADR-0015); recurring appointments; what to do with
+  future appointments when a patient is archived (today they remain and can
+  still be cancelled).
 
 ### Milestone 4 — Clinical sessions & notes
 **Status: NOT STARTED**
