@@ -76,6 +76,13 @@ export function PatientForm({
 
   function set<K extends keyof Values>(key: K, value: Values[K]) {
     setValues((previous) => ({ ...previous, [key]: value }));
+    // A field's error goes away as soon as it is edited, not on next submit.
+    setInvalid((previous) => {
+      if (!previous.has(key as Field)) return previous;
+      const next = new Set(previous);
+      next.delete(key as Field);
+      return next;
+    });
   }
 
   async function submit(event: React.FormEvent) {
@@ -132,10 +139,13 @@ export function PatientForm({
           </label>
           <select
             id="patient-status"
-            value={values.status}
+            // An archived patient's status is shown as such; it is changed
+            // only by the owner's restore action, never by this form.
+            value={patient?.status === 'archived' ? 'archived' : values.status}
             onChange={(event) => set('status', event.target.value as EditablePatientStatus)}
             className={inputClass}
           >
+            {patient?.status === 'archived' ? <option value="archived">{t('status.archived')}</option> : null}
             <option value="active">{t('status.active')}</option>
             <option value="inactive">{t('status.inactive')}</option>
           </select>

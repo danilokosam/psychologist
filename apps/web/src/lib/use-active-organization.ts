@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { accountResponseSchema, type MembershipRole } from '@psych/types';
+import { useRouter } from 'next/navigation';
+import { useLocale } from 'next-intl';
+import { accountResponseSchema, supportedLocaleSchema, type MembershipRole } from '@psych/types';
+import { setLocaleCookie } from './locale';
 import { apiFetch } from './api-client';
 import { getStoredActiveOrganization, setStoredActiveOrganization } from './active-organization';
 
@@ -26,12 +29,23 @@ export type ActiveOrganizationState =
  */
 export function useActiveOrganization(): ActiveOrganizationState {
   const [state, setState] = useState<ActiveOrganizationState>({ kind: 'loading' });
+  const locale = useLocale();
+  const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
 
     async function load(): Promise<ActiveOrganizationState> {
       const account = accountResponseSchema.parse(await apiFetch<unknown>('/me'));
+
+      // F-013, same as the dashboard: the saved preference outranks this
+      // browser's cookie, also when the user lands here first (deep link,
+      // or the login redirect back to /patients).
+      const saved = supportedLocaleSchema.safeParse(account.profile.locale);
+      if (saved.success && saved.data !== locale) {
+        setLocaleCookie(saved.data);
+        router.refresh();
+      }
       const usable = account.memberships.filter((m) => m.status === 'active');
       const stored = getStoredActiveOrganization();
       const chosen = usable.find((m) => m.organizationId === stored) ?? usable[0];
@@ -59,7 +73,7 @@ export function useActiveOrganization(): ActiveOrganizationState {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [locale, router]);
 
   return state;
 }
