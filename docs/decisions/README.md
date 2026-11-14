@@ -14,7 +14,7 @@ Status is one of `Proposed`, `Accepted`, `Superseded`, `Deprecated`.
 | [0003](0003-defense-in-depth-tenant-isolation.md) | Defense-in-depth tenant isolation: app-layer scoping + RLS with identity-only session variables | Accepted |
 | [0004](0004-composite-foreign-keys.md) | Composite foreign keys to prevent cross-organization relationships | Accepted |
 | [0005](0005-enum-based-roles-for-mvp.md) | Enum-based roles instead of a dynamic RBAC engine for the MVP | Accepted |
-| [0006](0006-append-only-clinical-note-versions.md) | Append-only versioning for clinical notes | Accepted |
+| [0006](0006-append-only-clinical-note-versions.md) | Append-only versioning for clinical notes | Accepted (amended by 0016) |
 | [0007](0007-english-first-i18n.md) | English-first internationalization with next-intl | Accepted |
 | [0008](0008-supabase-auth-independent-verification.md) | Supabase Auth with independent JWT verification in Express; non-bypassing runtime DB role | Accepted |
 | [0009](0009-module-internal-ports-and-adapters.md) | Lightweight Ports-and-Adapters within each module; composition root uses request-scoped factory functions | Accepted |
@@ -24,6 +24,7 @@ Status is one of `Proposed`, `Accepted`, `Superseded`, `Deprecated`.
 | [0013](0013-organization-invitations.md) | Organization invitations: link token bound to the invitee's verified email | Accepted |
 | [0014](0014-patients-archived-not-deleted.md) | Patients are archived, never deleted; archiving is owner-only down to RLS | Accepted |
 | [0015](0015-appointment-conflicts-per-organization.md) | Double-booking prevented by database exclusion constraints, scoped per organization | Accepted |
+| [0016](0016-clinical-notes-immutable-rows.md) | Clinical notes: one immutable note per author per session, numbered versions, audited access (amends 0006) | Accepted |
 
 When a decision here needs to change, add a new ADR that supersedes the old
 one and update its status — don't silently edit history.

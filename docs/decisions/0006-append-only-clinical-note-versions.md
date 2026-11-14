@@ -1,6 +1,6 @@
 # ADR-0006: Append-only versioning for clinical notes
 
-**Status:** Accepted
+**Status:** Accepted — **amended by [ADR-0016](0016-clinical-notes-immutable-rows.md)** (no `current_version_id` pointer: the current version is the highest-numbered one, and notes are immutable rows)
 **Date:** 2026-11-09
 
 ## Context

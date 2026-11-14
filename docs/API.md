@@ -1,7 +1,7 @@
 # API
 
 Authentication, account bootstrap, language preference, organization
-invitations, patients and appointments are implemented. This document defines the conventions
+invitations, patients, appointments, clinical sessions and notes are implemented. This document defines the conventions
 every endpoint must follow; the endpoint table below is filled in
 incrementally, one feature at a time, as each is actually built and
 verified — never documented ahead of a working, tested implementation.
@@ -58,6 +58,14 @@ verified — never documented ahead of a working, tested implementation.
 | GET | `/appointments/:id` | One appointment (cancelled included) | Bearer + org; `appointments.read` | Implemented (M3) |
 | PATCH | `/appointments/:id` | Reschedule (same row), reassign, modality, status incl. outcome (`422 NOT_YET_HAPPENED` before it starts); `409 APPOINTMENT_CANCELLED` | Bearer + org; `appointments.write` | Implemented (M3) |
 | POST | `/appointments/:id/cancel` | Cancel — frees the slot; final. No DELETE exists | Bearer + org; `appointments.write` | Implemented (M3) |
+| GET | `/clinical-sessions` | A patient's sessions (`?patientId=`, newest first) or an appointment's (`?appointmentId=`); page-based. Metadata only | Bearer + org; `clinicalSessions.read` (any role) | Implemented (M4) |
+| POST | `/clinical-sessions` | Record a session (optionally from an appointment: same patient, started, not cancelled, one per appointment — marks it completed). `422` INVALID_PATIENT / PATIENT_ARCHIVED / INVALID_PROFESSIONAL / NOT_YET_HAPPENED / INVALID_APPOINTMENT / APPOINTMENT_CANCELLED; `409 SESSION_ALREADY_RECORDED` | Bearer + org; `clinicalSessions.write` (owner, psychologist) | Implemented (M4) |
+| GET | `/clinical-sessions/:id` | One session (metadata) | Bearer + org; `clinicalSessions.read` | Implemented (M4) |
+| PATCH | `/clinical-sessions/:id` | Correct `startedAt` / `durationMinutes` only | Bearer + org; `clinicalSessions.write` | Implemented (M4) |
+| GET | `/clinical-sessions/:id/notes` | The session's notes, current version each. **Audited per note.** `no-store` | Bearer + org; `clinicalNotes.read` (owner, psychologist) | Implemented (M4) |
+| POST | `/clinical-sessions/:id/notes` | Open the caller's own note (version 1). `409 NOTE_EXISTS`; `422 PATIENT_ARCHIVED`. Audited | Bearer + org; `clinicalNotes.write` | Implemented (M4) |
+| POST | `/clinical-notes/:id/versions` | Add a version: `{ content, baseVersion }`. `403 NOT_NOTE_AUTHOR`; `409 NOTE_STALE`. Audited | Bearer + org; `clinicalNotes.write`, author only | Implemented (M4) |
+| GET | `/clinical-notes/:id/versions` | Full history, oldest first. Audited | Bearer + org; `clinicalNotes.read` | Implemented (M4) |
 | POST | `/patients/:id/restore` | Back to `active`. `409` if not archived | Bearer + org; `patients.archive` (owner) | Implemented (M2) |
 
 Everything else is *(not implemented yet — filled in per feature, see `docs/FEATURES.md`)*.
@@ -189,4 +197,23 @@ because the server cannot know the user's zone.
 accepts `patientId`. Responses embed `patient: { id, fullName }` and
 `professional: { userId, fullName }` (`fullName` is `null` for a
 professional no longer active in the practice).
+
+### Clinical sessions and notes
+
+Contracts: `packages/types/src/clinical.ts`
+([ADR-0016](decisions/0016-clinical-notes-immutable-rows.md)). A note is
+never edited in place: `POST /clinical-notes/:id/versions` with the version
+the author was looking at,
+
+```json
+{ "content": "…", "baseVersion": 3 }
+```
+
+writes version 4 — or answers `409 NOTE_STALE` if version 4 already exists
+(saved from another tab/device), so no text is ever silently replaced. Note
+content is stored exactly as written (not trimmed), must not be blank, and
+is at most 50,000 characters. Every note response is `Cache-Control:
+no-store`, and every note read or write is recorded in `audit_logs` (no
+content) in the same transaction. `admin_staff` gets `403` from every note
+endpoint and, independently, sees no rows under RLS.
 

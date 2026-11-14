@@ -8,6 +8,7 @@ import { PatientForm, type PatientFormValues } from './patient-form';
 import { PatientAppointments } from '../appointments/patient-appointments';
 import { ui } from '@/lib/ui';
 import { Alert, Badge, PATIENT_STATUS_TONE, Spinner } from '../ui/feedback';
+import { PatientSessions } from '../clinical/patient-sessions';
 
 type State = { kind: 'loading' } | { kind: 'ready'; patient: Patient } | { kind: 'not_found' } | { kind: 'error' };
 
@@ -112,6 +113,7 @@ export function PatientDetail({
       </div>
 
       <PatientAppointments organizationId={organizationId} patientId={patient.id} canBook={!archived} />
+      <PatientSessions organizationId={organizationId} patientId={patient.id} canRecord={!archived && role !== 'admin_staff'} />
 
       {role === 'owner' ? (
         <div className={`${ui.card} space-y-3`}>

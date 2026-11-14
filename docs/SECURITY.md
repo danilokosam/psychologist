@@ -296,105 +296,41 @@ before this pattern was corrected (ADR-0012).
 stops an `UPDATE` from moving a row into a different organization.
 Applied to every tenant table (`FOR ALL` covers SELECT/INSERT/UPDATE/DELETE).
 
-### Role-aware policies on clinical data — planned, not yet implemented
+### Role-aware policies on clinical data — implemented (Milestone 4)
 
 Administrative staff must not read or write clinical notes **even if the
 application-level role check is accidentally missed**, and even a
-psychologist must not silently edit another psychologist's note. Both
-properties are enforced in SQL, re-deriving authorization from
-`memberships` rather than trusting a role claimed via session variable —
-matching the permission matrix above.
+psychologist must not silently edit another psychologist's note. Both are
+enforced in SQL, re-deriving the role from `memberships` on every check
+(`app_private.has_active_role`) rather than trusting anything the
+application passes in. Full policies: migration
+`20261115120000_clinical_sessions_notes_audit`;
+design: [ADR-0016](decisions/0016-clinical-notes-immutable-rows.md).
 
-```sql
-ALTER TABLE memberships ENABLE ROW LEVEL SECURITY;
-CREATE POLICY memberships_org_scope ON memberships
-  USING (organization_id = current_setting('app.current_org_id', true)::uuid);
--- Not role-gated: team membership itself isn't the sensitive data here,
--- and this policy must stay non-circular so clinical tables can query it below.
+| Table | SELECT | INSERT | UPDATE / DELETE |
+|---|---|---|---|
+| `clinical_sessions` | any active member (metadata, for billing) | active owner/psychologist, as yourself, clinician professional, patient not archived | UPDATE (time, duration only) by owner/psychologist; no DELETE |
+| `clinical_notes` | active owner/psychologist — **nothing for `admin_staff`** | owner/psychologist, `author_id` = caller | **none** (no grant) |
+| `clinical_note_versions` | active owner/psychologist | caller is the **note's author** (and `created_by` = caller) | **none** (no grant) |
+| `audit_logs` | **none** (no grant, not even for owners) | active member, own `actor_user_id` | **none** (no grant) |
 
-ALTER TABLE clinical_notes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE clinical_notes FORCE ROW LEVEL SECURITY;
+Proven with the application removed (`apps/api/test/integration/clinical.test.ts`,
+"RLS only"): `admin_staff` sees zero notes/versions while a clinician in the
+same organization sees them, and cannot insert notes, versions or sessions;
+a non-author psychologist cannot insert a version — neither as themselves
+nor by claiming the author's id; nobody can update or delete a version; the
+audit log can't be read or forged.
 
--- Any active owner/psychologist in the org may READ a note.
-CREATE POLICY clinical_notes_select ON clinical_notes
-  FOR SELECT
-  USING (
-    organization_id = current_setting('app.current_org_id', true)::uuid
-    AND EXISTS (
-      SELECT 1 FROM memberships m
-      WHERE m.organization_id = clinical_notes.organization_id
-        AND m.user_id = current_setting('app.current_user_id', true)::uuid
-        AND m.role IN ('owner', 'psychologist') AND m.status = 'active'
-    )
-  );
+**Audit (F-012).** Every clinical-note read (one row per note returned),
+creation, revision and history read is recorded in `audit_logs` **in the
+same transaction** as the access — if the audit write fails, the access
+fails. No content, names or free text ever go into the trail.
 
--- Creating a note requires the clinical role AND that you name yourself as author.
-CREATE POLICY clinical_notes_insert ON clinical_notes
-  FOR INSERT
-  WITH CHECK (
-    organization_id = current_setting('app.current_org_id', true)::uuid
-    AND author_id = current_setting('app.current_user_id', true)::uuid
-    AND EXISTS (
-      SELECT 1 FROM memberships m
-      WHERE m.organization_id = clinical_notes.organization_id
-        AND m.user_id = current_setting('app.current_user_id', true)::uuid
-        AND m.role IN ('owner', 'psychologist') AND m.status = 'active'
-    )
-  );
-
--- Editing (advancing current_version_id) is restricted to the note's own author.
--- author_id is immutable, so checking it in WITH CHECK is sufficient regardless
--- of how broad the USING clause is.
-CREATE POLICY clinical_notes_update ON clinical_notes
-  FOR UPDATE
-  USING (organization_id = current_setting('app.current_org_id', true)::uuid)
-  WITH CHECK (author_id = current_setting('app.current_user_id', true)::uuid);
-
--- No DELETE policy is defined: clinical notes can never be deleted through
--- the application, by design (append-only clinical record-keeping, ADR-0006).
-
-ALTER TABLE clinical_note_versions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE clinical_note_versions FORCE ROW LEVEL SECURITY;
-
-CREATE POLICY clinical_note_versions_select ON clinical_note_versions
-  FOR SELECT
-  USING (
-    EXISTS (SELECT 1 FROM clinical_notes cn WHERE cn.id = clinical_note_versions.clinical_note_id)
-  ); -- visibility is inherited from clinical_notes_select, re-checked via the join
-
-CREATE POLICY clinical_note_versions_insert ON clinical_note_versions
-  FOR INSERT
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM clinical_notes cn
-      WHERE cn.id = clinical_note_versions.clinical_note_id
-        AND cn.author_id = current_setting('app.current_user_id', true)::uuid
-    )
-  );
-
-ALTER TABLE clinical_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE clinical_sessions FORCE ROW LEVEL SECURITY;
-
--- Readable by any active org member (admin_staff needs this for billing);
--- writable only by owner/psychologist (Postgres OR's permissive policies
--- together, so SELECT is governed by the broader of the two policies below).
-CREATE POLICY clinical_sessions_select ON clinical_sessions
-  FOR SELECT
-  USING (organization_id = current_setting('app.current_org_id', true)::uuid);
-
-CREATE POLICY clinical_sessions_write ON clinical_sessions
-  FOR ALL
-  USING (
-    organization_id = current_setting('app.current_org_id', true)::uuid
-    AND EXISTS (
-      SELECT 1 FROM memberships m
-      WHERE m.organization_id = clinical_sessions.organization_id
-        AND m.user_id = current_setting('app.current_user_id', true)::uuid
-        AND m.role IN ('owner', 'psychologist') AND m.status = 'active'
-    )
-  )
-  WITH CHECK ( /* identical condition */ );
-```
+**Handling of note content in transit and in logs:** responses carry
+`Cache-Control: no-store`; Prisma validation errors (which echo query
+arguments) are logged by class name only; the UI disables spell-check on
+note fields, because browsers' enhanced spell-check can send text to a
+third-party service.
 
 ### Runtime database role — cannot bypass RLS
 

@@ -167,25 +167,48 @@ appointment identity through its lifecycle.
   cancelled row is invisible (final); the new row's professional must be a
   valid clinician unless the update is the cancellation itself.
 
-### `clinical_sessions`
-Represents a session that actually took place — a distinct concept from
-an appointment (a scheduled event). `id PK`, `organization_id FK`,
+### `clinical_sessions` (implemented, Milestone 4)
+A session that actually took place — distinct from the appointment that
+scheduled it. `id PK`, `organization_id FK`,
 `patient_id` → composite FK to `patients`,
-`appointment_id` → composite FK to `appointments`, nullable,
 `professional_id` → composite FK to `memberships`,
-`session_date`, `duration_minutes`, `created_by`.
+`appointment_id` nullable, **UNIQUE** (one session per appointment), with a
+composite FK `(appointment_id, organization_id, patient_id)` →
+`appointments (id, organization_id, patient_id)` so the appointment must be
+the same patient's; `started_at timestamptz`, `duration_minutes` (CHECK
+1–720), `created_by` → composite FK to `memberships`, `created_at`,
+`updated_at`. No clinical content here.
 
-### `clinical_notes` / `clinical_note_versions`
-The most sensitive tables in the schema. `clinical_notes` holds
-`id PK`, `organization_id FK`,
+- **Grants:** no DELETE; UPDATE only on `started_at`, `duration_minutes`,
+  `updated_at`.
+- **RLS:** SELECT for every active member (admin_staff bills from it);
+  INSERT/UPDATE only for an active owner/psychologist
+  (`has_active_role`), as yourself, for a clinician professional, never for
+  an archived patient.
+
+### `clinical_notes` / `clinical_note_versions` (implemented, Milestone 4)
+The most sensitive tables in the schema
+([ADR-0006](decisions/0006-append-only-clinical-note-versions.md) as amended
+by [ADR-0016](decisions/0016-clinical-notes-immutable-rows.md)).
+
+`clinical_notes`: `id PK`, `organization_id FK`,
 `clinical_session_id` → composite FK to `clinical_sessions`,
-`author_id` → composite FK to `memberships`,
-`current_version_id FK → clinical_note_versions`.
+`author_id` → composite FK to `memberships`, `created_at`.
+**UNIQUE (clinical_session_id, author_id)** — one note per author per
+session. No pointer column: the current text is the highest version.
 
-`clinical_note_versions` is **append-only** — edits insert a new row, they
-never `UPDATE` existing content. See
-[ADR-0006](decisions/0006-append-only-clinical-note-versions.md).
-`id PK`, `clinical_note_id FK`, `content text`, `created_by`, `created_at`.
+`clinical_note_versions`: `id PK`, `organization_id FK`,
+`clinical_note_id` → composite FK to `clinical_notes`, `version` (CHECK ≥ 1,
+**UNIQUE per note**), `content` (CHECK: contains a non-whitespace
+character, ≤ 50,000 chars), `created_by` → composite FK to `memberships`,
+`created_at`.
+
+- **Grants:** both tables are INSERT + SELECT only — no UPDATE, no DELETE,
+  for anyone, the author included.
+- **RLS:** read by active owners/psychologists only (for `admin_staff` the
+  tables return nothing); a note is opened only by its author, as a
+  clinician; a version is inserted only by the caller, onto a note whose
+  `author_id` is the caller.
 
 ### `payments`
 Ledger only — not a payment processor integration. `id PK`,
@@ -199,11 +222,21 @@ Ledger only — not a payment processor integration. `id PK`,
 `stripe_customer_id`, `stripe_subscription_id`. Not populated/used until
 the subscription billing feature (post-MVP) ships.
 
-### `audit_logs`
-Append-only. `id PK`, `organization_id FK`, `actor_user_id`, `action`,
-`resource_type`, `resource_id`, `metadata jsonb`, `created_at`. Every
-read/write of `clinical_notes` / `clinical_note_versions` is logged here,
-not just writes.
+### `audit_logs` (implemented, Milestone 4)
+Append-only accountability trail (F-012). `id PK`, `organization_id FK`,
+`actor_user_id` (no FK on purpose — the trail must outlive the actor's
+membership), `action`, `resource_type` (CHECK: machine vocabulary like
+`clinical_note.read` — never free text), `resource_id`, `metadata jsonb`
+(identifiers and version numbers only — **never content**), `created_at`.
+Every read (per note returned), creation, revision and history read of a
+clinical note writes one row, in the same transaction as the access.
+
+- **Grants:** `app_runtime` has **INSERT only** — not even SELECT. The app
+  can append to the trail but cannot read it back or alter it.
+- **RLS:** INSERT only for an active member of the declared organization,
+  recording their own `actor_user_id`.
+- No IP address is recorded (data minimization; open question for the
+  Milestone 6 legal review).
 
 ## Indexes
 

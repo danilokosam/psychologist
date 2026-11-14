@@ -121,5 +121,17 @@ Mallory gets `404` for it under any organization header; Ana can archive
 and restore it. Add more patients through the UI or `POST /patients` — always
 fictional, always with "(TEST)" in the name.
 
+## Synthetic clinical data (Milestone 4)
+
+| Session | Notes | Good for |
+|---|---|---|
+| José (Consulta Ana) with Bruno, Fri 2026-11-13 10:00, recorded **from** appointment `58c3d5f5-b8a4-4527-9723-dfc9c8e3c426` (now `completed`) — session `0582956c-d848-4c3d-8866-3ada4664c3f7` | Bruno's note `d7f9cb50-76fc-4204-9a1d-938a05552eee`, 2 versions | Ana (owner) and any other psychologist can **read** it but get `403 NOT_NOTE_AUTHOR` adding a version; Carla sees the session metadata only and `403` on every note endpoint; a second session for that appointment → `409` |
+| Marta (Consulta Mallory) with Mallory, Sat 2026-11-14 17:00 — session `6761858d-9800-49cb-956c-c9670de1e05d` | Mallory's note, 2 versions | The full single-clinician flow |
+
+All note text is synthetic. Note content is Art. 9 data in a real deployment:
+never paste real clinical text here, even as an example. The audit trail
+for these accesses is in `audit_logs` (readable only with the privileged
+connection).
+
 > Keep this file in sync if accounts, roles, organizations or synthetic
 > patients change.
