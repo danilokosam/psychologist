@@ -5,6 +5,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { patientResponseSchema, type MembershipRole, type Patient } from '@psych/types';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { PatientForm, type PatientFormValues } from './patient-form';
+import { PatientAppointments } from '../appointments/patient-appointments';
 
 type State = { kind: 'loading' } | { kind: 'ready'; patient: Patient } | { kind: 'not_found' } | { kind: 'error' };
 
@@ -120,6 +121,8 @@ export function PatientDetail({
       <div className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
         <PatientForm key={formKey} patient={patient} submitLabel={t('save')} onSubmit={save} disabled={archived} />
       </div>
+
+      <PatientAppointments organizationId={organizationId} patientId={patient.id} canBook={!archived} />
 
       {role === 'owner' ? (
         <div className="space-y-2 rounded border border-zinc-200 bg-white p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900">

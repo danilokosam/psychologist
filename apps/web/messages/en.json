@@ -25,7 +25,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "emptyState": "Appointments, sessions and payments arrive in later milestones.",
+    "emptyState": "Sessions and payments arrive in later milestones.",
     "defaultPracticeName": "My practice",
     "loading": "Loading your account...",
     "loadFailed": "Could not load your account: {message}",
@@ -34,7 +34,8 @@
     "role": "Role",
     "signOut": "Sign out",
     "organizationOption": "{name} — {role}",
-    "patientsLink": "Patients"
+    "patientsLink": "Patients",
+    "calendarLink": "Calendar"
   },
   "roles": {
     "owner": "Owner",
@@ -132,5 +133,76 @@
     "archivedDone": "Patient archived.",
     "restoredDone": "Patient restored.",
     "actionFailed": "The action could not be completed. Reload the page and try again."
+  },
+  "appointments": {
+    "title": "Calendar",
+    "new": "New appointment",
+    "book": "Book appointment",
+    "backToDashboard": "← Dashboard",
+    "backToCalendar": "← Calendar",
+    "loading": "Loading...",
+    "loadFailed": "Could not load appointments.",
+    "notFound": "This appointment does not exist or is not in this practice.",
+    "view": "View",
+    "views": {
+      "day": "Day",
+      "week": "Week",
+      "month": "Month"
+    },
+    "previous": "Previous",
+    "today": "Today",
+    "next": "Next",
+    "professional": "Professional",
+    "allProfessionals": "All professionals",
+    "unknownProfessional": "(former member)",
+    "chooseProfessional": "Choose a professional",
+    "modality": {
+      "in_person": "In person",
+      "online": "Online"
+    },
+    "status": {
+      "scheduled": "Scheduled",
+      "confirmed": "Confirmed",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "no_show": "No-show"
+    },
+    "emptyDay": "No appointments this day.",
+    "newOnThisDay": "Book an appointment on this day",
+    "more": "+{count} more",
+    "patient": "Patient",
+    "changePatient": "Change",
+    "searchPatient": "Search a patient by name, email or phone",
+    "noPatientMatches": "No active patient matches.",
+    "date": "Date",
+    "time": "Start",
+    "duration": "Duration",
+    "minutes": "{count} min",
+    "modalityLabel": "Modality",
+    "statusLabel": "Status",
+    "save": "Save changes",
+    "saving": "Saving...",
+    "saved": "Changes saved.",
+    "showInCalendar": "Show in calendar",
+    "cancelAppointment": "Cancel appointment",
+    "cancelConfirm": "Cancel this appointment? This cannot be undone.",
+    "cancelYes": "Yes, cancel it",
+    "keep": "Keep it",
+    "cancelledDone": "Appointment cancelled. Its time slot is free again.",
+    "cancelledFinal": "This appointment was cancelled and can no longer be changed. Book a new one if needed.",
+    "upcoming": "Upcoming appointments",
+    "noUpcoming": "No upcoming appointments.",
+    "errors": {
+      "PROFESSIONAL_CONFLICT": "The professional already has an appointment at that time.",
+      "PATIENT_CONFLICT": "The patient already has an appointment at that time.",
+      "INVALID_TIME_RANGE": "The appointment must end after it starts and last at most 12 hours.",
+      "INVALID_PROFESSIONAL": "That person cannot be the professional: choose an active owner or psychologist.",
+      "INVALID_PATIENT": "That patient is not in this practice.",
+      "PATIENT_ARCHIVED": "That patient is archived. An owner must restore them before booking.",
+      "NOT_YET_HAPPENED": "An appointment can be marked completed or no-show only once it has started.",
+      "APPOINTMENT_CANCELLED": "This appointment was cancelled and can no longer be changed.",
+      "incomplete": "Choose a patient, a professional, a date and a time.",
+      "generic": "Something went wrong. Reload the page and try again."
+    }
   }
 }
