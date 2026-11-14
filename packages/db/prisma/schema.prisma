@@ -98,11 +98,15 @@ model Organization {
   createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz
   deletedAt        DateTime?        @map("deleted_at") @db.Timestamptz
 
-  creator      Profile       @relation(fields: [createdBy], references: [id])
-  memberships  Membership[]
-  invitations  Invitation[]
-  patients     Patient[]
-  appointments Appointment[]
+  creator          Profile               @relation(fields: [createdBy], references: [id])
+  memberships      Membership[]
+  invitations      Invitation[]
+  patients         Patient[]
+  appointments     Appointment[]
+  clinicalSessions ClinicalSession[]
+  clinicalNotes    ClinicalNote[]
+  noteVersions     ClinicalNoteVersion[]
+  auditLogs        AuditLog[]
 
   // Created by migration 20261109172000 but never declared here, so a future
   // `prisma migrate dev` would have generated a DROP for it. Caught by the CI
@@ -122,11 +126,15 @@ model Membership {
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   profile      Profile      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  sentInvitations     Invitation[]  @relation("InvitationInviter")
-  acceptedInvitations Invitation[]  @relation("InvitationAcceptor")
-  createdPatients     Patient[]     @relation("PatientCreator")
-  appointments        Appointment[] @relation("AppointmentProfessional")
-  createdAppointments Appointment[] @relation("AppointmentCreator")
+  sentInvitations     Invitation[]          @relation("InvitationInviter")
+  acceptedInvitations Invitation[]          @relation("InvitationAcceptor")
+  createdPatients     Patient[]             @relation("PatientCreator")
+  appointments        Appointment[]         @relation("AppointmentProfessional")
+  createdAppointments Appointment[]         @relation("AppointmentCreator")
+  clinicalSessions    ClinicalSession[]     @relation("SessionProfessional")
+  createdSessions     ClinicalSession[]     @relation("SessionCreator")
+  authoredNotes       ClinicalNote[]
+  noteVersions        ClinicalNoteVersion[]
 
   // ADR-0004: this is the compound unique index every future composite FK
   // referencing "a user acting within an org" (professional_id, author_id,
@@ -191,10 +199,11 @@ model Patient {
   updatedAt             DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
   archivedAt            DateTime?     @map("archived_at") @db.Timestamptz
 
-  organization Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization     Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   // ADR-0004: the creator is "a user acting within an org".
-  creator      Membership    @relation("PatientCreator", fields: [organizationId, createdBy], references: [organizationId, userId], onDelete: NoAction)
-  appointments Appointment[]
+  creator          Membership        @relation("PatientCreator", fields: [organizationId, createdBy], references: [organizationId, userId], onDelete: NoAction)
+  appointments     Appointment[]
+  clinicalSessions ClinicalSession[]
 
   // ADR-0004: target of every future composite FK (appointments, sessions...).
   @@unique([id, organizationId])
@@ -232,11 +241,117 @@ model Appointment {
   professional Membership   @relation("AppointmentProfessional", fields: [organizationId, professionalId], references: [organizationId, userId], onDelete: NoAction)
   creator      Membership   @relation("AppointmentCreator", fields: [organizationId, createdBy], references: [organizationId, userId], onDelete: NoAction)
 
+  // At most one, enforced by clinical_sessions.appointment_id UNIQUE; modeled
+  // as a list because the FK is composite (appointment, organization, patient).
+  clinicalSessions ClinicalSession[]
+
   @@unique([id, organizationId])
+  // Target of clinical_sessions' (appointment, organization, patient) FK: a
+  // session recorded for an appointment must be for that appointment's
+  // patient (ADR-0016).
+  @@unique([id, organizationId, patientId])
   // Calendar queries: the whole practice, or one professional, by time.
   @@index([organizationId, scheduledStart])
   @@index([organizationId, professionalId, scheduledStart])
   @@index([organizationId, patientId])
   @@index([organizationId, createdBy])
   @@map("appointments")
+}
+
+// F-008, ADR-0016. That a session took place -- distinct from the appointment
+// that scheduled it. Created/edited only by owner/psychologist; readable by
+// admin_staff as metadata for billing. No content here: clinical content
+// lives only in clinical_note_versions.
+model ClinicalSession {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String   @map("organization_id") @db.Uuid
+  patientId       String   @map("patient_id") @db.Uuid
+  professionalId  String   @map("professional_id") @db.Uuid
+  // Optional; at most one session per appointment, and only for that
+  // appointment's own patient (composite FK below).
+  appointmentId   String?  @unique @map("appointment_id") @db.Uuid
+  startedAt       DateTime @map("started_at") @db.Timestamptz
+  durationMinutes Int      @map("duration_minutes")
+  createdBy       String   @map("created_by") @db.Uuid
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  patient      Patient        @relation(fields: [patientId, organizationId], references: [id, organizationId], onDelete: NoAction)
+  professional Membership     @relation("SessionProfessional", fields: [organizationId, professionalId], references: [organizationId, userId], onDelete: NoAction)
+  creator      Membership     @relation("SessionCreator", fields: [organizationId, createdBy], references: [organizationId, userId], onDelete: NoAction)
+  appointment  Appointment?   @relation(fields: [appointmentId, organizationId, patientId], references: [id, organizationId, patientId], onDelete: NoAction)
+  notes        ClinicalNote[]
+
+  @@unique([id, organizationId])
+  @@index([organizationId, patientId, startedAt])
+  @@index([organizationId, professionalId])
+  @@index([organizationId, createdBy])
+  @@map("clinical_sessions")
+}
+
+// F-009, ADR-0006 as amended by ADR-0016. One note per (session, author).
+// Immutable: app_runtime has no UPDATE or DELETE on this table at all -- the
+// note's text lives in its versions, and the current text is the highest
+// version.
+model ClinicalNote {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId    String   @map("organization_id") @db.Uuid
+  clinicalSessionId String   @map("clinical_session_id") @db.Uuid
+  // Only this person may ever add a version (RLS + use case).
+  authorId          String   @map("author_id") @db.Uuid
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  session      ClinicalSession       @relation(fields: [clinicalSessionId, organizationId], references: [id, organizationId], onDelete: NoAction)
+  author       Membership            @relation(fields: [organizationId, authorId], references: [organizationId, userId], onDelete: NoAction)
+  versions     ClinicalNoteVersion[]
+
+  @@unique([id, organizationId])
+  @@unique([clinicalSessionId, authorId])
+  @@index([organizationId, authorId])
+  @@map("clinical_notes")
+}
+
+// Append-only (ADR-0006): INSERT and SELECT only, never UPDATE or DELETE.
+// The most sensitive column in the schema is `content`.
+model ClinicalNoteVersion {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  clinicalNoteId String   @map("clinical_note_id") @db.Uuid
+  // 1, 2, 3...; unique per note, so two concurrent edits cannot both win.
+  version        Int
+  content        String
+  createdBy      String   @map("created_by") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  note         ClinicalNote @relation(fields: [clinicalNoteId, organizationId], references: [id, organizationId], onDelete: NoAction)
+  creator      Membership   @relation(fields: [organizationId, createdBy], references: [organizationId, userId], onDelete: NoAction)
+
+  @@unique([clinicalNoteId, version])
+  @@index([organizationId, createdBy])
+  @@map("clinical_note_versions")
+}
+
+// F-012. Append-only accountability trail; app_runtime may INSERT only --
+// not even SELECT -- so the application can neither read nor tamper with it.
+// Never stores clinical content: `metadata` holds identifiers and version
+// numbers only. `actor_user_id` has no FK on purpose: the trail must outlive
+// the actor's membership.
+model AuditLog {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  actorUserId    String   @map("actor_user_id") @db.Uuid
+  action         String
+  resourceType   String   @map("resource_type")
+  resourceId     String   @map("resource_id") @db.Uuid
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, resourceType, resourceId, createdAt])
+  @@index([organizationId, actorUserId, createdAt])
+  @@map("audit_logs")
 }

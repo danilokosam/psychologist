@@ -95,3 +95,36 @@ export type {
   OrganizationMember,
   UpdateAppointmentRequest,
 } from './appointments';
+
+export {
+  NOTE_MAX_CHARS,
+  SESSION_MAX_MINUTES,
+  addNoteVersionRequestSchema,
+  clinicalNoteResponseSchema,
+  clinicalNoteSchema,
+  clinicalSessionResponseSchema,
+  clinicalSessionSchema,
+  createClinicalNoteRequestSchema,
+  createClinicalSessionRequestSchema,
+  listClinicalNotesResponseSchema,
+  listClinicalSessionsQuerySchema,
+  listClinicalSessionsResponseSchema,
+  noteHistoryResponseSchema,
+  noteVersionSchema,
+  updateClinicalSessionRequestSchema,
+} from './clinical';
+export type {
+  AddNoteVersionRequest,
+  ClinicalNote,
+  ClinicalNoteResponse,
+  ClinicalSession,
+  ClinicalSessionResponse,
+  CreateClinicalNoteRequest,
+  CreateClinicalSessionRequest,
+  ListClinicalNotesResponse,
+  ListClinicalSessionsQuery,
+  ListClinicalSessionsResponse,
+  NoteHistoryResponse,
+  NoteVersion,
+  UpdateClinicalSessionRequest,
+} from './clinical';
