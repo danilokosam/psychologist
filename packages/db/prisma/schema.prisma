@@ -80,6 +80,10 @@ model Organization {
   memberships Membership[]
   invitations Invitation[]
 
+  // Created by migration 20261109172000 but never declared here, so a future
+  // `prisma migrate dev` would have generated a DROP for it. Caught by the CI
+  // drift check (migrations vs this schema).
+  @@index([createdBy])
   @@map("organizations")
 }
 
@@ -101,6 +105,9 @@ model Membership {
   // referencing "a user acting within an org" (professional_id, author_id,
   // ...) will target -- column order matches docs/DATABASE.md exactly.
   @@unique([organizationId, userId])
+  // Same story: added in 20261109160500 (advisor-flagged unindexed FK) but
+  // missing from the schema until the CI drift check found it.
+  @@index([userId])
   @@map("memberships")
 }
 
