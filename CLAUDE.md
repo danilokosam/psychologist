@@ -283,7 +283,8 @@ What exists and is verified end to end:
   features (e.g. leaked-password protection) are unavailable. Never use
   `supabase config push` with the repo's `supabase/config.toml`: it is the
   *local* stack's config and would overwrite the real project's Auth settings
-  (it would turn email confirmation and MFA off).
+  (it would turn email confirmation and MFA off). Safe procedure (minimal
+  config in a scratch `--workdir`): `docs/SECURITY.md` "Password policy".
 - `app_migrator` / `app_runtime` roles, both confirmed `NOBYPASSRLS` and
   non-superuser. `profiles`/`organizations`/`memberships` schema applied as
   Prisma migrations, RLS enabled **and forced**, policies gating on
