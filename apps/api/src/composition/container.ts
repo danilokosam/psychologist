@@ -14,6 +14,14 @@ import {
   listInvitations,
   revokeInvitation,
 } from '../modules/organizations/application/use-cases/manage-invitations';
+import { PrismaPatientRepository } from '../modules/patients/infrastructure/prisma-patient-repository';
+import { createPatient } from '../modules/patients/application/use-cases/create-patient';
+import { getPatient, listPatients } from '../modules/patients/application/use-cases/read-patients';
+import { updatePatient } from '../modules/patients/application/use-cases/update-patient';
+import {
+  archivePatient,
+  restorePatient,
+} from '../modules/patients/application/use-cases/archive-patient';
 
 /**
  * The only file allowed to import a concrete infrastructure adapter (ADR-0009).
@@ -51,5 +59,19 @@ export function buildOrganizationsModule(tx: Tx) {
       revokeInvitation(input, { invitations }),
     acceptInvitation: (input: Parameters<typeof acceptInvitation>[0]) =>
       acceptInvitation(input, { invitations, accounts, tokens }),
+  };
+}
+
+/** Patients (F-005, ADR-0014). Same request-scoped factory pattern as above. */
+export function buildPatientsModule(tx: Tx) {
+  const patients = new PrismaPatientRepository(tx);
+
+  return {
+    createPatient: (input: Parameters<typeof createPatient>[0]) => createPatient(input, { patients }),
+    getPatient: (input: Parameters<typeof getPatient>[0]) => getPatient(input, { patients }),
+    listPatients: (input: Parameters<typeof listPatients>[0]) => listPatients(input, { patients }),
+    updatePatient: (input: Parameters<typeof updatePatient>[0]) => updatePatient(input, { patients }),
+    archivePatient: (input: Parameters<typeof archivePatient>[0]) => archivePatient(input, { patients }),
+    restorePatient: (input: Parameters<typeof restorePatient>[0]) => restorePatient(input, { patients }),
   };
 }

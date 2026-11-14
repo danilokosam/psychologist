@@ -157,13 +157,33 @@ with a richer version deferred to Extended MVP — noted per feature.
   and an empty role list is refused at startup.
 
 ### F-005 — Patient Management (CRUD)
-**Milestone:** 2 · **Status:** NOT STARTED · **Scope tier:** Core MVP
+**Milestone:** 2 · **Status:** COMPLETED (2026-11-14) · **Scope tier:** Core MVP
 - **Purpose:** Register, edit, and view patients.
 - **Acceptance criteria:** Create/read/update available to `owner`,
   `psychologist`, and `admin_staff`; delete/archive restricted to
   `owner` only (see the permission matrix, `docs/SECURITY.md`).
   Pagination and basic search work.
-- **Modules/files:** TBD.
+  **As built:** "delete" is **archive/restore** — nothing is ever deleted
+  ([ADR-0014](decisions/0014-patients-archived-not-deleted.md)); archived
+  patients are read-only for everyone until an owner restores them.
+  Page-based pagination (`page`/`pageSize` ≤ 100, `total`), case-insensitive
+  search over name/email/phone (LIKE wildcards escaped), status filter.
+- **Modules/files:** `apps/api/src/modules/patients/` (domain, ports, use
+  cases, Prisma adapter, routes); `packages/types/src/patients.ts`;
+  migration `20261115100000_patients` + `app_private.has_active_role` in
+  `packages/db/sql/rls-helpers.sql`; web: `apps/web/src/app/patients/`,
+  `apps/web/src/components/patients/`, `lib/use-active-organization.ts`.
+- **Verified:** `apps/api/test/integration/patients.test.ts` (role matrix,
+  validation, pagination/search, cross-tenant 404s, RLS-only: outsider,
+  suspended member, creator spoofing, non-owner archive/restore refused by
+  the policy, no DELETE grant, no column grant on organization/creator,
+  CHECK constraints and composite FK bypassing the app);
+  `verify-rls-isolation.mjs` 10/10 against the live project; browser pass
+  with the synthetic test accounts (2026-11-14): Ana (owner) create / edit /
+  archive / restore / search in en+es; Carla (admin_staff) edits but gets
+  `403` on archive/restore, `400` when smuggling `organizationId` or
+  `status: archived`; Mallory gets `404` for Ana's patient under her own and
+  under Ana's organization header.
 - **Security considerations:** org-scoped RLS (`docs/SECURITY.md`); no
   `national_id` or other unjustified field collected
   (`docs/DATA-INVENTORY.md`); `organizationId` is always taken from the

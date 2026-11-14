@@ -108,9 +108,24 @@ Dependabot's first batch (2026-11-14): merged #2 (7 minor/patch: Next 16.4.6, Re
 
 
 ### Milestone 2 — Patients
-**Status: NOT STARTED**
+**Status: COMPLETED** (2026-11-14)
 - Patient CRUD, pagination/search.
 - **DoD:** RLS-on-patients verified by tests; data-inventory entries for any new field added before merge.
+- **Delivered:** F-005 — `patients` table with forced RLS, owner-only
+  archive enforced by the policy itself, no DELETE grant
+  ([ADR-0014](decisions/0014-patients-archived-not-deleted.md)); REST
+  endpoints under `/patients`; list/search/create/edit/archive UI in en/es.
+  Applied to Supabase; `verify-rls-isolation.mjs` extended to patients
+  (10/10 live).
+- **Found and fixed during M2:** Prisma's `contains` does not escape `%`/`_`
+  — a search for `%` matched every patient (caught by the integration
+  suite; the adapter escapes them now). `verify-rls-isolation.mjs` documented
+  running with `packages/db/.env`, which is `app_migrator`, not
+  `app_runtime` — corrected.
+- **Follow-ups (not blocking):** accent-insensitive search (`unaccent`);
+  `pg_trgm` index only if an organization grows to tens of thousands of
+  patients; hard erasure / retention handling waits for the M6 legal review
+  (ADR-0014).
 
 ### Milestone 3 — Appointments / Calendar
 **Status: NOT STARTED**
@@ -133,6 +148,7 @@ Dependabot's first batch (2026-11-14): merged #2 (7 minor/patch: Next 16.4.6, Re
 - Verify Supabase Auth "Confirm email" is enforced in production (ADR-0013's email binding relies on it).
 - Leaked-password protection: requires upgrading the Supabase project to Pro. Decide before real users: upgrade (also brings daily backups/PITR options relevant to the backup-verification item above), or document compensating controls (stronger password policy, rate limiting, MFA).
 - **Evaluate and apply the deferred dependency upgrades** (table below) — each as its own PR through green CI, *before* real data is admitted, so a regression can only ever hit synthetic data. Then remove the corresponding `ignore` rules from `.github/dependabot.yml` (and the `deepmerge-ts` override once on Prisma 7).
+- **Patient erasure and retention** ([ADR-0014](decisions/0014-patients-archived-not-deleted.md)): once the legal review sets the retention period, design the audited erasure procedure for archived patients (and Art. 17 requests).
 - **Delete the synthetic `@example.test` test accounts** (`docs/TEST-ACCOUNTS.md`) and their organizations before any real data is admitted — they share a documented password.
 - **DoD:** ready to onboard pilot psychologists under a signed beta agreement. **Real patient data is permitted only after this milestone's legal review is complete** — synthetic data only until then.
 

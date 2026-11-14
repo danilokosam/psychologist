@@ -6,7 +6,7 @@ import { AppError } from './error-handler';
 /**
  * Rejects a request whose caller lacks one of the `allowed` roles in the
  * active organization. Use with an entry from PERMISSIONS rather than an
- * ad-hoc list: `requireRole(PERMISSIONS['patients.delete'])`.
+ * ad-hoc list: `requireRole(PERMISSIONS['patients.archive'])`.
  *
  * Must run after requireAuth and resolveOrganization. The role it reads was
  * loaded from `memberships` by resolveOrganization -- never from a header,

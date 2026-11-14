@@ -162,7 +162,7 @@ removed (RLS only). It never touches the Supabase project. CI runs it too.
 
 ```bash
 cd packages/db
-DATABASE_URL="<app_runtime url>" node scripts/verify-rls-isolation.mjs <userA> <userB> <orgOfA>
+node --env-file=../../apps/api/.env scripts/verify-rls-isolation.mjs <userA> <userB> <orgOfA>   # app_runtime, NOT packages/db/.env
 ```
 
 Asserts at the **database** layer — no application code in the path — that
@@ -175,8 +175,8 @@ whenever a tenant policy changes; it caught a real hole once already.
 
 | Job | What it guarantees | Blocking |
 |---|---|---|
-| `check` | lint (incl. en/es translation-catalog parity), typecheck (with Next's generated route types), 72 unit tests, production build | yes |
-| `integration` | 57 tests against a real Postgres built exactly like production (roles, RLS helpers, every migration): tenant isolation at the API **and** RLS-only layers, auth, invitations; then **schema drift** — `schema.prisma` must match what the migrations produce | yes |
+| `check` | lint (incl. en/es translation-catalog parity), typecheck (with Next's generated route types), 80 unit tests, production build | yes |
+| `integration` | 113 tests against a real Postgres built exactly like production (roles, RLS helpers, every migration): tenant isolation at the API **and** RLS-only layers, auth, invitations, patients (incl. owner-only archive enforced by RLS); then **schema drift** — `schema.prisma` must match what the migrations produce | yes |
 | `audit` | `pnpm audit --prod --audit-level high` (production dependencies); a full audit is reported but not blocking | prod: yes |
 
 **`main` is protected** by a repository ruleset: no direct pushes, no force

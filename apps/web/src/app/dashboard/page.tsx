@@ -1,11 +1,12 @@
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { AccountPanel } from '@/components/account-panel';
 
 /**
  * The empty dashboard Milestone 0's definition of done asks for.
  *
- * It has no practice data on it yet, because patients, appointments and
- * sessions don't exist until later milestones. What it does prove is the full
+ * No practice metrics yet (Milestone 5); for now it links to the patients
+ * list (Milestone 2). What it does prove is the full
  * chain: an authenticated session, a verified token reaching the API, the
  * account bootstrapped in Postgres, and the caller's own organization read
  * back through RLS.
@@ -22,6 +23,12 @@ export default function DashboardPage() {
           </h1>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('emptyState')}</p>
         </div>
+        <Link
+          href="/patients"
+          className="block rounded border border-zinc-200 bg-white p-4 font-medium underline dark:border-zinc-800 dark:bg-zinc-900"
+        >
+          {t('patientsLink')}
+        </Link>
         <AccountPanel />
       </div>
     </main>

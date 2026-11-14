@@ -25,7 +25,7 @@
   },
   "dashboard": {
     "title": "Panel",
-    "emptyState": "Todavía no hay nada que mostrar — pacientes, citas y sesiones llegan en hitos posteriores.",
+    "emptyState": "Las citas, sesiones y pagos llegan en próximos hitos.",
     "defaultPracticeName": "Mi consulta",
     "loading": "Cargando tu cuenta...",
     "loadFailed": "No se pudo cargar tu cuenta: {message}",
@@ -33,7 +33,8 @@
     "practice": "Consulta",
     "role": "Rol",
     "signOut": "Cerrar sesión",
-    "organizationOption": "{name} — {role}"
+    "organizationOption": "{name} — {role}",
+    "patientsLink": "Pacientes"
   },
   "roles": {
     "owner": "Titular",
@@ -71,5 +72,65 @@
   },
   "locale": {
     "label": "Idioma"
+  },
+  "patients": {
+    "title": "Pacientes",
+    "new": "Nuevo paciente",
+    "backToDashboard": "← Panel",
+    "backToList": "← Pacientes",
+    "inPractice": "Consulta: {name}",
+    "noPractice": "Todavía no trabajas en ninguna consulta.",
+    "loading": "Cargando...",
+    "loadFailed": "No se pudieron cargar los pacientes.",
+    "notFound": "Este paciente no existe o no pertenece a esta consulta.",
+    "search": "Buscar",
+    "searchPlaceholder": "Nombre, email o teléfono",
+    "empty": "Todavía no hay pacientes.",
+    "noMatches": "Ningún paciente coincide con la búsqueda.",
+    "filter": {
+      "working": "Activos e inactivos"
+    },
+    "status": {
+      "active": "Activo",
+      "inactive": "Inactivo",
+      "archived": "Archivado"
+    },
+    "fields": {
+      "fullName": "Nombre completo",
+      "dateOfBirth": "Fecha de nacimiento",
+      "email": "Email",
+      "phone": "Teléfono",
+      "emergencyContactName": "Contacto de emergencia",
+      "emergencyContactPhone": "Teléfono de emergencia",
+      "status": "Estado"
+    },
+    "invalid": {
+      "fullName": "Introduce un nombre (máximo 200 caracteres).",
+      "dateOfBirth": "Introduce una fecha entre 1900 y hoy.",
+      "email": "Introduce un email válido.",
+      "phone": "Usa solo dígitos, espacios y + ( ) - .",
+      "emergencyContactName": "Máximo 200 caracteres.",
+      "emergencyContactPhone": "Usa solo dígitos, espacios y + ( ) - ."
+    },
+    "pageInfo": "Página {page} de {pages} · {total, plural, one {# paciente} other {# pacientes}}",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "create": "Crear paciente",
+    "save": "Guardar cambios",
+    "saving": "Guardando...",
+    "saved": "Cambios guardados.",
+    "saveFailed": "No se pudo guardar el paciente. Revisa los campos e inténtalo de nuevo.",
+    "archivedReadOnly": "Este paciente está archivado y no se puede editar. Un propietario puede restaurarlo.",
+    "archivedOn": "archivado el {date}",
+    "archiveTitle": "Archivar",
+    "archiveExplanation": "Archivar quita al paciente de la lista de trabajo y deja su ficha en solo lectura. No se borra nada, y un propietario puede restaurarlo cuando quiera.",
+    "archive": "Archivar paciente",
+    "archiveConfirm": "¿Archivar este paciente?",
+    "archiveYes": "Sí, archivar",
+    "cancel": "Cancelar",
+    "restore": "Restaurar paciente",
+    "archivedDone": "Paciente archivado.",
+    "restoredDone": "Paciente restaurado.",
+    "actionFailed": "No se pudo completar la acción. Recarga la página e inténtalo de nuevo."
   }
 }

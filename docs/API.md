@@ -1,7 +1,7 @@
 # API
 
-Authentication, account bootstrap, language preference and organization
-invitations are implemented; no clinical/business endpoints yet. This document defines the conventions
+Authentication, account bootstrap, language preference, organization
+invitations and patients are implemented. This document defines the conventions
 every endpoint must follow; the endpoint table below is filled in
 incrementally, one feature at a time, as each is actually built and
 verified — never documented ahead of a working, tested implementation.
@@ -19,9 +19,16 @@ verified — never documented ahead of a working, tested implementation.
   ```
   Cross-tenant access attempts return `404`, not `403` (see
   `docs/SECURITY.md` — don't reveal that the resource exists in another org).
-- **Pagination:** cursor or offset/limit (decide and record here once the
-  first list endpoint is built — e.g. patients list — rather than
-  speculating on a convention with no real endpoint yet).
+- **Pagination (decided with `GET /patients`, Milestone 2):** page-based —
+  `?page=` (1-based, default 1) and `?pageSize=` (default 20, max 100); the
+  response carries `page`, `pageSize` and `total`. Chosen over cursors
+  because lists are per organization and small (hundreds of rows), and the UI
+  wants "page X of Y". Ordering always ends in `id` so equal sort keys can't
+  swap places between pages. Revisit (keyset) for any list that can grow
+  unbounded, e.g. audit logs.
+- **Unknown query parameters and body keys are rejected with 400** (strict
+  schemas), so a client cannot believe it set something — e.g.
+  `organizationId` — that the server silently ignored.
 - **Validation:** request bodies validated against the shared Zod schemas
   in `packages/types`, which are also used for frontend form validation.
 - **Versioning:** not needed yet — single consumer (our own frontend),
@@ -40,6 +47,12 @@ verified — never documented ahead of a working, tested implementation.
 | GET | `/organizations/current/invitations` | Pending invitations of the active organization (never the token or its hash) | Bearer + org; `organization.manage` (owner) | Implemented (M1) |
 | DELETE | `/organizations/current/invitations/:id` | Revoke a pending invitation (status change, not a delete) | Bearer + org; `organization.manage` (owner) | Implemented (M1) |
 | POST | `/invitations/accept` | Join the inviting organization. No `X-Organization-Id`: the caller isn't a member of it yet | Bearer token (email claim must match the invitation) | Implemented (M1) |
+| GET | `/patients` | One page of the organization's patients, by name. `?q=` searches name/email/phone; `?status=active\|inactive\|archived` (absent = active + inactive) | Bearer + org; `patients.read` (any role) | Implemented (M2) |
+| POST | `/patients` | Register a patient | Bearer + org; `patients.write` (any role) | Implemented (M2) |
+| GET | `/patients/:id` | One patient (archived ones included) | Bearer + org; `patients.read` | Implemented (M2) |
+| PATCH | `/patients/:id` | Partial update; `null` clears an optional field. `409 PATIENT_ARCHIVED` for an archived patient (any role) | Bearer + org; `patients.write` | Implemented (M2) |
+| POST | `/patients/:id/archive` | Archive (there is no delete — ADR-0014). `409` if already archived | Bearer + org; `patients.archive` (owner) | Implemented (M2) |
+| POST | `/patients/:id/restore` | Back to `active`. `409` if not archived | Bearer + org; `patients.archive` (owner) | Implemented (M2) |
 
 Everything else is *(not implemented yet — filled in per feature, see `docs/FEATURES.md`)*.
 
@@ -120,3 +133,28 @@ integration suite since M1):
 
 > Update this table as part of finishing a feature, not before — an
 > endpoint only belongs here once it is implemented and tested.
+
+### Patients
+
+Contracts: `packages/types/src/patients.ts`. Create body (only `fullName`
+is required; `""` for an optional field means "no value" and is stored as
+`null`; `status` may be `active` or `inactive`, never `archived`):
+
+```json
+{
+  "fullName": "Paciente Sintético",
+  "dateOfBirth": "1990-05-17",
+  "email": "paciente@example.test",
+  "phone": "+34 600 000 000",
+  "emergencyContactName": "Contacto Sintético",
+  "emergencyContactPhone": "+34 600 000 001",
+  "status": "active"
+}
+```
+
+Not representable (400 if sent): `organizationId`, `createdBy`, `id`,
+`archivedAt` — they come from the verified tenant context or the owner-only
+actions. Responses are `{ "patient": { … } }`, or for the list
+`{ "patients": [ … ], "page": 1, "pageSize": 20, "total": 26 }`; dates of
+birth are `YYYY-MM-DD` strings, timestamps ISO-8601. Unknown, malformed and
+other-organization ids all return the same `404`.

@@ -47,6 +47,14 @@ enum InvitationStatus {
   revoked
 }
 
+// `archived` replaces deletion (ADR-0014): only an owner can archive or
+// restore, and nothing is ever hard-deleted through the application.
+enum PatientStatus {
+  active
+  inactive
+  archived
+}
+
 // 1:1 shadow of Supabase's auth.users (see note above re: the FK).
 model Profile {
   id        String   @id @db.Uuid
@@ -79,6 +87,7 @@ model Organization {
   creator     Profile      @relation(fields: [createdBy], references: [id])
   memberships Membership[]
   invitations Invitation[]
+  patients    Patient[]
 
   // Created by migration 20261109172000 but never declared here, so a future
   // `prisma migrate dev` would have generated a DROP for it. Caught by the CI
@@ -100,6 +109,7 @@ model Membership {
 
   sentInvitations     Invitation[] @relation("InvitationInviter")
   acceptedInvitations Invitation[] @relation("InvitationAcceptor")
+  createdPatients     Patient[]    @relation("PatientCreator")
 
   // ADR-0004: this is the compound unique index every future composite FK
   // referencing "a user acting within an org" (professional_id, author_id,
@@ -142,4 +152,36 @@ model Invitation {
   @@index([organizationId, invitedBy])
   @@index([organizationId, acceptedBy])
   @@map("invitations")
+}
+
+// F-005. Every column is personal data -- see docs/DATA-INVENTORY.md before
+// adding one. Deliberately absent: national_id, a free-text notes field
+// (clinical content would leak to admin_staff), assigned professional and
+// consent timestamp (no MVP feature needs them yet). See ADR-0014.
+model Patient {
+  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String        @map("organization_id") @db.Uuid
+  fullName              String        @map("full_name")
+  dateOfBirth           DateTime?     @map("date_of_birth") @db.Date
+  // Stored lower-cased (CHECK constraint in the migration).
+  email                 String?
+  phone                 String?
+  emergencyContactName  String?       @map("emergency_contact_name")
+  emergencyContactPhone String?       @map("emergency_contact_phone")
+  status                PatientStatus @default(active)
+  createdBy             String        @map("created_by") @db.Uuid
+  createdAt             DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  archivedAt            DateTime?     @map("archived_at") @db.Timestamptz
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  // ADR-0004: the creator is "a user acting within an org".
+  creator      Membership   @relation("PatientCreator", fields: [organizationId, createdBy], references: [organizationId, userId], onDelete: NoAction)
+
+  // ADR-0004: target of every future composite FK (appointments, sessions...).
+  @@unique([id, organizationId])
+  @@index([organizationId, createdBy])
+  // The list is ordered by name within one organization.
+  @@index([organizationId, fullName])
+  @@map("patients")
 }

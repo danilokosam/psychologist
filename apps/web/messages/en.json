@@ -25,7 +25,7 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "emptyState": "Nothing to show yet — patients, appointments and sessions arrive in later milestones.",
+    "emptyState": "Appointments, sessions and payments arrive in later milestones.",
     "defaultPracticeName": "My practice",
     "loading": "Loading your account...",
     "loadFailed": "Could not load your account: {message}",
@@ -33,7 +33,8 @@
     "practice": "Practice",
     "role": "Role",
     "signOut": "Sign out",
-    "organizationOption": "{name} — {role}"
+    "organizationOption": "{name} — {role}",
+    "patientsLink": "Patients"
   },
   "roles": {
     "owner": "Owner",
@@ -71,5 +72,65 @@
   },
   "locale": {
     "label": "Language"
+  },
+  "patients": {
+    "title": "Patients",
+    "new": "New patient",
+    "backToDashboard": "← Dashboard",
+    "backToList": "← Patients",
+    "inPractice": "Practice: {name}",
+    "noPractice": "You are not working in any practice yet.",
+    "loading": "Loading...",
+    "loadFailed": "Could not load patients.",
+    "notFound": "This patient does not exist or is not in this practice.",
+    "search": "Search",
+    "searchPlaceholder": "Name, email or phone",
+    "empty": "No patients yet.",
+    "noMatches": "No patients match your search.",
+    "filter": {
+      "working": "Active and inactive"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "archived": "Archived"
+    },
+    "fields": {
+      "fullName": "Full name",
+      "dateOfBirth": "Date of birth",
+      "email": "Email",
+      "phone": "Phone",
+      "emergencyContactName": "Emergency contact name",
+      "emergencyContactPhone": "Emergency contact phone",
+      "status": "Status"
+    },
+    "invalid": {
+      "fullName": "Enter a name (up to 200 characters).",
+      "dateOfBirth": "Enter a date between 1900 and today.",
+      "email": "Enter a valid email address.",
+      "phone": "Use digits, spaces and + ( ) - . only.",
+      "emergencyContactName": "Up to 200 characters.",
+      "emergencyContactPhone": "Use digits, spaces and + ( ) - . only."
+    },
+    "pageInfo": "Page {page} of {pages} · {total, plural, one {# patient} other {# patients}}",
+    "previous": "Previous",
+    "next": "Next",
+    "create": "Create patient",
+    "save": "Save changes",
+    "saving": "Saving...",
+    "saved": "Changes saved.",
+    "saveFailed": "Could not save the patient. Check the fields and try again.",
+    "archivedReadOnly": "This patient is archived and cannot be edited. An owner can restore it.",
+    "archivedOn": "archived {date}",
+    "archiveTitle": "Archive",
+    "archiveExplanation": "Archiving removes the patient from the working list and makes the record read-only. Nothing is deleted, and an owner can restore it at any time.",
+    "archive": "Archive patient",
+    "archiveConfirm": "Archive this patient?",
+    "archiveYes": "Yes, archive",
+    "cancel": "Cancel",
+    "restore": "Restore patient",
+    "archivedDone": "Patient archived.",
+    "restoredDone": "Patient restored.",
+    "actionFailed": "The action could not be completed. Reload the page and try again."
   }
 }

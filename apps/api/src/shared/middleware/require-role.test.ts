@@ -17,7 +17,7 @@ const EXPECTED: Record<Permission, Record<MembershipRole, boolean>> = {
   'organization.manage': { owner: true, psychologist: false, admin_staff: false },
   'patients.read': { owner: true, psychologist: true, admin_staff: true },
   'patients.write': { owner: true, psychologist: true, admin_staff: true },
-  'patients.delete': { owner: true, psychologist: false, admin_staff: false },
+  'patients.archive': { owner: true, psychologist: false, admin_staff: false },
   'appointments.read': { owner: true, psychologist: true, admin_staff: true },
   'appointments.write': { owner: true, psychologist: true, admin_staff: true },
   'clinicalSessions.read': { owner: true, psychologist: true, admin_staff: true },
