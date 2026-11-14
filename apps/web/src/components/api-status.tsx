@@ -30,7 +30,11 @@ export function ApiStatus() {
   }, []);
 
   return (
-    <p className="text-sm text-zinc-600 dark:text-zinc-400">
+    <p className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted">
+      <span
+        aria-hidden="true"
+        className={`size-2 rounded-full ${state.kind === 'ok' ? 'bg-success' : state.kind === 'error' ? 'bg-danger' : 'bg-border-strong'}`}
+      />
       {t('apiStatusLabel')}:{' '}
       {state.kind === 'checking' && t('apiStatusChecking')}
       {state.kind === 'ok' && t('apiStatusOk', { timestamp: state.timestamp })}

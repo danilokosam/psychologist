@@ -9,6 +9,7 @@ import { ApiError, apiFetch } from '@/lib/api-client';
 import { setStoredActiveOrganization } from '@/lib/active-organization';
 import { fullNameFromSession } from '@/lib/full-name';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { ui } from '@/lib/ui';
 
 type State = 'working' | 'accepted' | 'invalid' | 'alreadyMember' | 'missing' | 'error';
 
@@ -95,13 +96,13 @@ export function AcceptInvitation() {
 
   return (
     <div className="space-y-4">
-      <p className={state === 'invalid' || state === 'error' ? 'text-sm text-red-600 dark:text-red-400' : 'text-sm'}>
+      <p className={state === 'invalid' || state === 'error' ? 'text-sm text-danger' : 'text-sm text-foreground'}>
         {t(state)}
       </p>
       {state === 'accepted' || state === 'alreadyMember' ? (
         <Link
           href="/dashboard"
-          className="inline-block rounded bg-zinc-900 px-4 py-2 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+          className={ui.button.primary}
         >
           {t('goToDashboard')}
         </Link>

@@ -15,6 +15,8 @@ import { getStoredActiveOrganization, setStoredActiveOrganization } from '@/lib/
 import { fullNameFromSession } from '@/lib/full-name';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { InvitationsPanel } from './invitations-panel';
+import { ui } from '@/lib/ui';
+import { Alert, Badge, Spinner } from './ui/feedback';
 
 type Active = { organizationId: string; name: string; role: MembershipRole };
 
@@ -105,34 +107,25 @@ export function AccountPanel() {
     }
   }
 
-  async function signOut() {
-    await createSupabaseBrowserClient().auth.signOut();
-    router.replace('/login');
-  }
-
   const usable = state.kind === 'ready' ? state.account.memberships.filter((m) => m.status === 'active') : [];
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4 rounded border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        {state.kind === 'loading' ? (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('loading')}</p>
-        ) : null}
+      <div className={`${ui.card} space-y-4`}>
+        {state.kind === 'loading' ? <Spinner label={t('loading')} /> : null}
 
         {state.kind === 'error' ? (
-          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-            {t('loadFailed', { message: state.message })}
-          </p>
+          <Alert tone="danger">{t('loadFailed', { message: state.message })}</Alert>
         ) : null}
 
         {state.kind === 'ready' ? (
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-zinc-600 dark:text-zinc-400">{t('signedInAs')}</dt>
+          <dl className="divide-y divide-border text-sm">
+            <div className="flex justify-between gap-4 py-2.5">
+              <dt className="text-muted">{t('signedInAs')}</dt>
               <dd className="font-medium">{state.account.profile.fullName ?? '—'}</dd>
             </div>
-            <div className="flex items-center justify-between gap-4">
-              <dt className="text-zinc-600 dark:text-zinc-400">
+            <div className="flex items-center justify-between gap-4 py-2.5">
+              <dt className="text-muted">
                 {usable.length > 1 ? <label htmlFor="active-organization">{t('practice')}</label> : t('practice')}
               </dt>
               <dd className="font-medium">
@@ -141,7 +134,7 @@ export function AccountPanel() {
                     id="active-organization"
                     value={state.active?.organizationId ?? ''}
                     onChange={(event) => void onSwitch(event.target.value)}
-                    className="rounded border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+                    className={`${ui.inputInline} py-1.5`}
                   >
                     {usable.map((m) => (
                       // The role is shown too because names are not unique:
@@ -158,16 +151,13 @@ export function AccountPanel() {
                 )}
               </dd>
             </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-zinc-600 dark:text-zinc-400">{t('role')}</dt>
-              <dd className="font-medium">{state.active ? tRoles(state.active.role) : '—'}</dd>
+            <div className="flex justify-between gap-4 py-2.5">
+              <dt className="text-muted">{t('role')}</dt>
+              <dd>{state.active ? <Badge tone="primary">{tRoles(state.active.role)}</Badge> : '—'}</dd>
             </div>
           </dl>
         ) : null}
 
-        <button type="button" onClick={signOut} className="text-sm text-zinc-600 underline dark:text-zinc-400">
-          {t('signOut')}
-        </button>
       </div>
 
       {state.kind === 'ready' && state.active?.role === 'owner' ? (

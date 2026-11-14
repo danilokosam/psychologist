@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl';
 import { appointmentResponseSchema, patientResponseSchema } from '@psych/types';
 import { apiFetch } from '@/lib/api-client';
 import { AppointmentForm, type AppointmentFormValues } from './appointment-form';
+import { ui } from '@/lib/ui';
+import { Spinner } from '../ui/feedback';
 
 export function NewAppointment({
   organizationId,
@@ -46,10 +48,10 @@ export function NewAppointment({
     router.push(`/appointments/${appointmentResponseSchema.parse(raw).appointment.id}`);
   }
 
-  if (patient === undefined) return <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('loading')}</p>;
+  if (patient === undefined) return <Spinner label={t('loading')} />;
 
   return (
-    <div className="rounded border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <div className={ui.card}>
       <AppointmentForm
         organizationId={organizationId}
         initialDate={initialDate ?? undefined}

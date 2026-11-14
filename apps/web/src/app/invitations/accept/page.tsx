@@ -9,9 +9,9 @@ export default function AcceptInvitationPage() {
   const t = useTranslations('acceptInvitation');
 
   return (
-    <main className="flex flex-1 items-center justify-center bg-zinc-50 p-6 dark:bg-black">
-      <div className="w-full max-w-sm space-y-4">
-        <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-zinc-50">{t('title')}</h1>
+    <main className="flex flex-1 items-center justify-center p-6">
+      <div className="w-full max-w-sm space-y-4 rounded-xl border border-border bg-surface p-6 shadow-sm">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">{t('title')}</h1>
         <AcceptInvitation />
       </div>
     </main>

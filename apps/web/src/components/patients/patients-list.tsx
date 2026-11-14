@@ -6,6 +6,8 @@ import { useFormatter, useTranslations } from 'next-intl';
 import { listPatientsResponseSchema, type ListPatientsResponse, type PatientStatus } from '@psych/types';
 import { apiFetch } from '@/lib/api-client';
 import { formatCalendarDate } from '@/lib/calendar-date';
+import { ui } from '@/lib/ui';
+import { Alert, Badge, PATIENT_STATUS_TONE, Spinner } from '../ui/feedback';
 
 const PAGE_SIZE = 20;
 type StatusFilter = 'working' | PatientStatus;
@@ -60,8 +62,8 @@ export function PatientsList({ organizationId }: { organizationId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-48 flex-1 space-y-1">
-          <label htmlFor="patient-search" className="block text-sm text-zinc-700 dark:text-zinc-300">
+        <div className="min-w-48 flex-1 space-y-1.5">
+          <label htmlFor="patient-search" className={ui.label}>
             {t('search')}
           </label>
           <input
@@ -71,11 +73,11 @@ export function PatientsList({ organizationId }: { organizationId: string }) {
             onChange={(event) => setQuery(event.target.value)}
             placeholder={t('searchPlaceholder')}
             autoComplete="off"
-            className="w-full rounded border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className={ui.input}
           />
         </div>
-        <div className="space-y-1">
-          <label htmlFor="patient-status-filter" className="block text-sm text-zinc-700 dark:text-zinc-300">
+        <div className="space-y-1.5">
+          <label htmlFor="patient-status-filter" className={ui.label}>
             {t('fields.status')}
           </label>
           <select
@@ -85,7 +87,7 @@ export function PatientsList({ organizationId }: { organizationId: string }) {
               setStatus(event.target.value as StatusFilter);
               setPage(1);
             }}
-            className="rounded border border-zinc-300 bg-white px-2 py-1 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className={ui.input}
           >
             <option value="working">{t('filter.working')}</option>
             <option value="active">{t('status.active')}</option>
@@ -96,55 +98,59 @@ export function PatientsList({ organizationId }: { organizationId: string }) {
       </div>
 
       {failed ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {t('loadFailed')}
-        </p>
+        <Alert tone="danger">{t('loadFailed')}</Alert>
       ) : null}
 
-      {result === null && !failed ? <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('loading')}</p> : null}
+      {result === null && !failed ? <Spinner label={t('loading')} /> : null}
 
       {result && result.patients.length === 0 ? (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">{search ? t('noMatches') : t('empty')}</p>
+        <div className={`${ui.card} text-center`}>
+          <p className={ui.muted}>{search ? t('noMatches') : t('empty')}</p>
+        </div>
       ) : null}
 
       {result && result.patients.length > 0 ? (
+        <div className="overflow-x-auto rounded-xl border border-border bg-surface shadow-sm">
         <table className="w-full text-left text-sm">
-          <thead className="text-zinc-600 dark:text-zinc-400">
+          <thead className="bg-surface-muted text-xs uppercase tracking-wide text-muted">
             <tr>
-              <th className="py-1 font-normal">{t('fields.fullName')}</th>
-              <th className="py-1 font-normal">{t('fields.dateOfBirth')}</th>
-              <th className="py-1 font-normal">{t('fields.phone')}</th>
-              <th className="py-1 font-normal">{t('fields.status')}</th>
+              <th className="px-4 py-2.5 font-medium">{t('fields.fullName')}</th>
+              <th className="px-4 py-2.5 font-medium">{t('fields.dateOfBirth')}</th>
+              <th className="px-4 py-2.5 font-medium">{t('fields.phone')}</th>
+              <th className="px-4 py-2.5 font-medium">{t('fields.status')}</th>
             </tr>
           </thead>
           <tbody>
             {result.patients.map((patient) => (
-              <tr key={patient.id} className="border-t border-zinc-200 dark:border-zinc-800">
-                <td className="py-1.5">
-                  <Link href={`/patients/${patient.id}`} className="font-medium underline">
+              <tr key={patient.id} className="border-t border-border transition-colors duration-150 hover:bg-surface-muted/60">
+                <td className="px-4 py-3">
+                  <Link href={`/patients/${patient.id}`} className={ui.link}>
                     {patient.fullName}
                   </Link>
                 </td>
-                <td className="py-1.5">
+                <td className="px-4 py-3">
                   {patient.dateOfBirth ? formatCalendarDate(format, patient.dateOfBirth) : '—'}
                 </td>
-                <td className="py-1.5">{patient.phone ?? '—'}</td>
-                <td className="py-1.5">{t(`status.${patient.status}`)}</td>
+                <td className="px-4 py-3">{patient.phone ?? '—'}</td>
+                <td className="px-4 py-3">
+                  <Badge tone={PATIENT_STATUS_TONE[patient.status]}>{t(`status.${patient.status}`)}</Badge>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+        </div>
       ) : null}
 
       {result && result.total > 0 ? (
-        <div className="flex items-center justify-between text-sm text-zinc-600 dark:text-zinc-400">
+        <div className="flex items-center justify-between text-sm text-muted">
           <span>{t('pageInfo', { page: result.page, pages, total: result.total })}</span>
-          <div className="space-x-2">
+          <div className="flex gap-2">
             <button
               type="button"
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
-              className="underline disabled:no-underline disabled:opacity-50"
+              className={ui.button.secondary}
             >
               {t('previous')}
             </button>
@@ -152,7 +158,7 @@ export function PatientsList({ organizationId }: { organizationId: string }) {
               type="button"
               disabled={page >= pages}
               onClick={() => setPage((p) => p + 1)}
-              className="underline disabled:no-underline disabled:opacity-50"
+              className={ui.button.secondary}
             >
               {t('next')}
             </button>

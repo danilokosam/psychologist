@@ -9,6 +9,8 @@ import {
   type Invitation,
 } from '@psych/types';
 import { ApiError, apiFetch } from '@/lib/api-client';
+import { ui } from '@/lib/ui';
+import { Alert } from './ui/feedback';
 
 /**
  * Owner-only team management: invite by email, see pending invitations,
@@ -105,15 +107,15 @@ export function InvitationsPanel({ organizationId }: { organizationId: string })
   }
 
   return (
-    <section className="space-y-4 rounded border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+    <section className={`${ui.card} space-y-4`}>
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold">{t('title')}</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('description')}</p>
+        <h2 className={ui.h2}>{t('title')}</h2>
+        <p className={ui.muted}>{t('description')}</p>
       </div>
 
-      <form onSubmit={onInvite} className="flex flex-wrap items-end gap-2">
-        <div className="min-w-48 flex-1 space-y-1">
-          <label htmlFor="invite-email" className="block text-sm font-medium">
+      <form onSubmit={onInvite} className="flex flex-wrap items-end gap-3">
+        <div className="min-w-48 flex-1 space-y-1.5">
+          <label htmlFor="invite-email" className={ui.label}>
             {t('email')}
           </label>
           <input
@@ -122,18 +124,18 @@ export function InvitationsPanel({ organizationId }: { organizationId: string })
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className={ui.input}
           />
         </div>
-        <div className="space-y-1">
-          <label htmlFor="invite-role" className="block text-sm font-medium">
+        <div className="space-y-1.5">
+          <label htmlFor="invite-role" className={ui.label}>
             {t('role')}
           </label>
           <select
             id="invite-role"
             value={role}
             onChange={(event) => setRole(event.target.value as InvitableRole)}
-            className="rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
+            className={ui.input}
           >
             <option value="psychologist">{tRoles('psychologist')}</option>
             <option value="admin_staff">{tRoles('admin_staff')}</option>
@@ -142,39 +144,37 @@ export function InvitationsPanel({ organizationId }: { organizationId: string })
         <button
           type="submit"
           disabled={pending}
-          className="rounded bg-zinc-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
+          className={ui.button.primary}
         >
           {pending ? t('sending') : t('invite')}
         </button>
       </form>
 
       {error ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {error}
-        </p>
+        <Alert tone="danger">{error}</Alert>
       ) : null}
 
       {link ? (
-        <div className="space-y-2 rounded border border-amber-300 bg-amber-50 p-3 text-sm dark:border-amber-700 dark:bg-amber-950">
+        <div className="space-y-2 rounded-lg border border-warning/40 bg-warning-soft p-3 text-sm text-foreground">
           <p>{t('linkReady')}</p>
-          <code className="block break-all text-xs">{link}</code>
-          <button type="button" onClick={onCopy} className="underline">
+          <code className="block break-all rounded-md bg-surface px-2 py-1 font-mono text-xs">{link}</code>
+          <button type="button" onClick={onCopy} className={ui.button.secondary}>
             {copied ? t('copied') : t('copy')}
           </button>
         </div>
       ) : null}
 
       {invitations.length === 0 ? (
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('none')}</p>
+        <p className={ui.muted}>{t('none')}</p>
       ) : (
-        <ul className="divide-y divide-zinc-200 text-sm dark:divide-zinc-800">
+        <ul className="divide-y divide-border text-sm">
           {invitations.map((invitation) => {
             const expired = new Date(invitation.expiresAt).getTime() <= loadedAt;
             return (
               <li key={invitation.id} className="flex items-center justify-between gap-4 py-2">
                 <div>
                   <p className="font-medium">{invitation.email}</p>
-                  <p className="text-zinc-600 dark:text-zinc-400">
+                  <p className="text-muted">
                     {tRoles(invitation.role)} ·{' '}
                     {expired
                       ? t('expired')
@@ -186,7 +186,7 @@ export function InvitationsPanel({ organizationId }: { organizationId: string })
                 <button
                   type="button"
                   onClick={() => onRevoke(invitation.id)}
-                  className="text-red-600 underline dark:text-red-400"
+                  className={ui.button.danger}
                 >
                   {t('revoke')}
                 </button>

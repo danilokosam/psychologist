@@ -11,6 +11,8 @@ import {
   type OrganizationMember,
 } from '@psych/types';
 import { apiFetch } from '@/lib/api-client';
+import { ui } from '@/lib/ui';
+import { Alert, Spinner } from '../ui/feedback';
 import {
   addDays,
   sameDay,
@@ -20,6 +22,15 @@ import {
   viewWindow,
   type CalendarView,
 } from '@/lib/calendar';
+
+// A colored left stripe per status: the calendar is readable at a glance.
+const STATUS_STRIPE: Record<Appointment['status'], string> = {
+  scheduled: 'border-l-info',
+  confirmed: 'border-l-success',
+  completed: 'border-l-primary',
+  no_show: 'border-l-danger',
+  cancelled: 'border-l-border-strong opacity-60',
+};
 
 /**
  * Day / week / month calendar (F-006). Each view asks the API for exactly
@@ -107,17 +118,15 @@ export function Calendar({
     <Link
       key={a.id}
       href={`/appointments/${a.id}`}
-      className={`block rounded border px-2 py-1 text-xs hover:bg-zinc-100 dark:hover:bg-zinc-800 ${
-        a.status === 'confirmed' ? 'border-green-300 dark:border-green-800' : 'border-zinc-200 dark:border-zinc-700'
-      }`}
+      className={`block rounded-md border border-l-4 border-border bg-surface px-2 py-1 text-xs transition-colors duration-150 hover:bg-primary-soft ${STATUS_STRIPE[a.status]}`}
     >
-      <span className="font-medium">
+      <span className="font-semibold text-foreground">
         {time(a.startsAt)}
         {compact ? '' : `–${time(a.endsAt)}`}
       </span>{' '}
       {a.patient.fullName}
       {compact ? null : (
-        <span className="block text-zinc-500 dark:text-zinc-400">
+        <span className="block text-muted">
           {a.professional.fullName ?? t('unknownProfessional')} · {t(`modality.${a.modality}`)} ·{' '}
           {t(`status.${a.status}`)}
         </span>
@@ -128,29 +137,29 @@ export function Calendar({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <div className="flex overflow-hidden rounded border border-zinc-300 dark:border-zinc-700" role="group" aria-label={t('view')}>
+        <div className="flex rounded-lg border border-border bg-surface-muted p-0.5" role="group" aria-label={t('view')}>
           {(['day', 'week', 'month'] as const).map((v) => (
             <button
               key={v}
               type="button"
               aria-pressed={v === view}
               onClick={() => go({ view: v })}
-              className={`px-3 py-1 ${v === view ? 'bg-black text-white dark:bg-white dark:text-black' : 'bg-white dark:bg-zinc-900'}`}
+              className={`rounded-md px-3 py-1 font-medium transition-colors duration-150 ${v === view ? 'bg-surface text-primary shadow-sm' : 'text-muted hover:text-foreground'}`}
             >
               {t(`views.${v}`)}
             </button>
           ))}
         </div>
-        <button type="button" onClick={() => go({ anchor: step(view, anchor, -1) })} className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700" aria-label={t('previous')}>
+        <button type="button" onClick={() => go({ anchor: step(view, anchor, -1) })} className={`${ui.button.secondary} px-3 py-1`} aria-label={t('previous')}>
           ‹
         </button>
-        <button type="button" onClick={() => go({ anchor: new Date() })} className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700">
+        <button type="button" onClick={() => go({ anchor: new Date() })} className={`${ui.button.secondary} px-3 py-1`}>
           {t('today')}
         </button>
-        <button type="button" onClick={() => go({ anchor: step(view, anchor, 1) })} className="rounded border border-zinc-300 px-2 py-1 dark:border-zinc-700" aria-label={t('next')}>
+        <button type="button" onClick={() => go({ anchor: step(view, anchor, 1) })} className={`${ui.button.secondary} px-3 py-1`} aria-label={t('next')}>
           ›
         </button>
-        <h2 className="flex-1 font-medium first-letter:uppercase">{title}</h2>
+        <h2 className="flex-1 text-lg font-semibold first-letter:uppercase">{title}</h2>
         <label htmlFor="calendar-professional" className="sr-only">
           {t('professional')}
         </label>
@@ -158,7 +167,7 @@ export function Calendar({
           id="calendar-professional"
           value={professionalId ?? ''}
           onChange={(event) => go({ professionalId: event.target.value || null })}
-          className="rounded border border-zinc-300 bg-white px-2 py-1 dark:border-zinc-700 dark:bg-zinc-900"
+          className={`${ui.inputInline} py-1.5`}
         >
           <option value="">{t('allProfessionals')}</option>
           {clinicians.map((m) => (
@@ -170,17 +179,19 @@ export function Calendar({
       </div>
 
       {failed ? (
-        <p role="alert" className="text-sm text-red-600 dark:text-red-400">
-          {t('loadFailed')}
-        </p>
+        <Alert tone="danger">{t('loadFailed')}</Alert>
       ) : null}
-      {appointments === null && !failed ? <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('loading')}</p> : null}
+      {appointments === null && !failed ? <Spinner label={t('loading')} /> : null}
 
       {appointments && view === 'day' ? (
         <div className="space-y-2">
-          {appointments.length === 0 ? <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('emptyDay')}</p> : null}
+          {appointments.length === 0 ? (
+            <div className={`${ui.card} text-center`}>
+              <p className={ui.muted}>{t('emptyDay')}</p>
+            </div>
+          ) : null}
           {appointments.map((a) => entry(a))}
-          <Link href={`/appointments/new?date=${toDateInput(anchor)}`} className="inline-block text-sm underline">
+          <Link href={`/appointments/new?date=${toDateInput(anchor)}`} className={`${ui.link} inline-block text-sm`}>
             {t('newOnThisDay')}
           </Link>
         </div>
@@ -189,11 +200,14 @@ export function Calendar({
       {appointments && view === 'week' ? (
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-7">
           {Array.from({ length: 7 }, (_, i) => addDays(from, i)).map((day) => (
-            <section key={day.toISOString()} className="min-h-24 space-y-1 rounded border border-zinc-200 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-900">
+            <section
+              key={day.toISOString()}
+              className={`min-h-28 space-y-1 rounded-xl border bg-surface p-1.5 ${sameDay(day, new Date()) ? 'border-primary' : 'border-border'}`}
+            >
               <button
                 type="button"
                 onClick={() => go({ view: 'day', anchor: day })}
-                className={`w-full text-left text-xs font-medium first-letter:uppercase ${sameDay(day, new Date()) ? 'text-blue-700 dark:text-blue-400' : ''}`}
+                className={`w-full text-left text-xs font-medium first-letter:uppercase ${sameDay(day, new Date()) ? 'text-link' : 'text-muted'}`}
               >
                 {format.dateTime(day, { weekday: 'short', day: 'numeric' })}
               </button>
@@ -206,7 +220,7 @@ export function Calendar({
       {appointments && view === 'month' ? (
         <div className="grid grid-cols-7 gap-1 text-xs">
           {Array.from({ length: 7 }, (_, i) => addDays(from, i)).map((day) => (
-            <div key={`weekday-${day.getDay()}`} className="text-center first-letter:uppercase text-zinc-500 dark:text-zinc-400">
+            <div key={`weekday-${day.getDay()}`} className="pb-1 text-center font-medium first-letter:uppercase text-muted">
               {format.dateTime(day, { weekday: 'short' })}
             </div>
           ))}
@@ -216,22 +230,22 @@ export function Calendar({
               return (
                 <section
                   key={day.toISOString()}
-                  className={`min-h-20 space-y-0.5 rounded border p-1 ${
+                  className={`min-h-24 space-y-0.5 rounded-lg border p-1 ${
                     day.getMonth() === anchor.getMonth()
-                      ? 'border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900'
-                      : 'border-transparent bg-zinc-100 text-zinc-400 dark:bg-zinc-950'
+                      ? 'border-border bg-surface'
+                      : 'border-transparent bg-surface-muted/60 text-muted'
                   }`}
                 >
                   <button
                     type="button"
                     onClick={() => go({ view: 'day', anchor: day })}
-                    className={`font-medium ${sameDay(day, new Date()) ? 'text-blue-700 dark:text-blue-400' : ''}`}
+                    className={`grid size-6 place-items-center rounded-full font-medium ${sameDay(day, new Date()) ? 'bg-primary text-primary-foreground' : ''}`}
                   >
                     {day.getDate()}
                   </button>
                   {items.slice(0, 3).map((a) => entry(a, true))}
                   {items.length > 3 ? (
-                    <button type="button" onClick={() => go({ view: 'day', anchor: day })} className="underline">
+                    <button type="button" onClick={() => go({ view: 'day', anchor: day })} className={`${ui.link} text-xs`}>
                       {t('more', { count: items.length - 3 })}
                     </button>
                   ) : null}

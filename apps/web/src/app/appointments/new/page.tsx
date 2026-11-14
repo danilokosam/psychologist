@@ -7,18 +7,19 @@ import { useTranslations } from 'next-intl';
 import { NewAppointment } from '@/components/appointments/new-appointment';
 import { WithActiveOrganization } from '@/components/patients/with-active-organization';
 import { parseDateParam } from '@/lib/calendar';
+import { ui } from '@/lib/ui';
 
 function NewAppointmentPage() {
   const t = useTranslations('appointments');
   const params = useSearchParams();
 
   return (
-    <main className="flex-1 bg-zinc-50 p-6 dark:bg-black">
-      <div className="mx-auto max-w-xl space-y-4">
-        <Link href="/appointments" className="text-sm text-zinc-600 underline dark:text-zinc-400">
+    <main className={`${ui.page} max-w-2xl`}>
+      <div className="space-y-4">
+        <Link href="/appointments" className="text-sm font-medium text-muted transition-colors duration-150 hover:text-foreground">
           {t('backToCalendar')}
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight text-black dark:text-zinc-50">{t('new')}</h1>
+        <h1 className={ui.h1}>{t('new')}</h1>
         <WithActiveOrganization>
           {(active) => (
             <NewAppointment
