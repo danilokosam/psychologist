@@ -99,7 +99,7 @@ Follow-ups, done after the merge (2026-11-14):
 - [x] Dependency vulnerabilities: 18 → 2 (both dev-only lint tooling). zod 3 → 4 (a DoS in input validation), vitest 2 → 4, `deepmerge-ts` overridden to 8 (via Prisma's CLI).
 
 Still open:
-- Supabase Auth **leaked-password protection** (HaveIBeenPwned check) is off — the remaining `supabase db advisors` finding. A dashboard toggle (Auth → Passwords); may depend on the plan.
+- Supabase Auth **leaked-password protection** (HaveIBeenPwned check) is off — the remaining `supabase db advisors` finding. **Blocked by the plan:** it is a Pro-plan feature and the project is on the Free plan (confirmed 2026-11-14 — the dashboard refuses the toggle). It cannot be set from the CLI either (not in the CLI's config schema). Acceptable while only synthetic test accounts exist; decided at Milestone 6 (see there).
 - Sign-up page heading still says "Sign in" in sign-up mode (cosmetic).
 
 
@@ -127,7 +127,8 @@ Still open:
 ### Milestone 6 — Hardening & beta prep
 **Status: NOT STARTED**
 - Rate limiting, error monitoring (Sentry), backup verification, privacy policy + DPA template, security review, DPIA completed, legal/DPO review of `docs/DATA-INVENTORY.md`.
-- Verify Supabase Auth "Confirm email" is enforced in production (ADR-0013's email binding relies on it), and leaked-password protection is on.
+- Verify Supabase Auth "Confirm email" is enforced in production (ADR-0013's email binding relies on it).
+- Leaked-password protection: requires upgrading the Supabase project to Pro. Decide before real users: upgrade (also brings daily backups/PITR options relevant to the backup-verification item above), or document compensating controls (stronger password policy, rate limiting, MFA).
 - **Delete the synthetic `@example.test` test accounts** (`docs/TEST-ACCOUNTS.md`) and their organizations before any real data is admitted — they share a documented password.
 - **DoD:** ready to onboard pilot psychologists under a signed beta agreement. **Real patient data is permitted only after this milestone's legal review is complete** — synthetic data only until then.
 
