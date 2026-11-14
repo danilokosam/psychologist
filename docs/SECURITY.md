@@ -33,6 +33,36 @@ synthetic, fictional records — until that review is complete (Milestone
    request context is assumed beyond this** — see
    [ADR-0008](decisions/0008-supabase-auth-independent-verification.md).
 
+### Password policy (Supabase Auth)
+
+Enforced by Supabase Auth on the real project (set 2026-11-14): **at least
+10 characters, with lowercase, uppercase, a digit and a symbol**
+(`password_requirements = lower_upper_letters_digits_symbols`). Email
+confirmation is required (`mailer_autoconfirm: false`) and TOTP MFA is
+enabled. The sign-up form mirrors the rule and translates Supabase's
+`weak_password` error; the server remains the only authority. Verified by
+attempting password changes on a test account: too short → rejected
+(`length`), missing character classes → rejected (`characters`); existing
+accounts keep signing in.
+
+**Leaked-password protection (HaveIBeenPwned) is not available**: it is a
+Pro-plan feature and the project is on Free. The stricter policy above is the
+compensating control until Milestone 6 decides on an upgrade.
+
+**How to change Auth settings on the real project safely.** Never run
+`supabase config push` with the repo's `supabase/config.toml` — it describes
+the *local* stack, and pushing it would turn off email confirmation and MFA
+in production. Instead put a minimal `supabase/config.toml` in a scratch
+directory declaring only the properties to change (undeclared ones are left
+untouched), then:
+```bash
+supabase config diff --workdir <scratch> --remote=<ref>    # only those properties may be "declared"
+supabase config push --workdir <scratch> --remote=<ref>    # without --yes first: prints the exact writes
+supabase config push --workdir <scratch> --remote=<ref> --yes
+```
+and re-check `enable_confirmations`/MFA afterwards. Keep the repo's local
+`config.toml` in sync with the policy so local and remote behave alike.
+
 ## Authorization flow (per request, in order)
 
 1. Load the membership row for `(user_id, organization_id)`. Missing or

@@ -19,7 +19,9 @@
     "switchToSignUp": "Don't have an account? Create one",
     "switchToSignIn": "Already have an account? Sign in",
     "checkYourEmail": "Check your email to confirm your account.",
-    "fullName": "Full name"
+    "fullName": "Full name",
+    "passwordRule": "At least 10 characters, with uppercase and lowercase letters, a number and a symbol.",
+    "weakPassword": "That password is too weak. Use at least 10 characters, with uppercase and lowercase letters, a number and a symbol."
   },
   "dashboard": {
     "title": "Dashboard",

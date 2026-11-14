@@ -47,7 +47,10 @@ export function LoginForm() {
           });
 
     if (result.error) {
-      setError(result.error.message);
+      // The project's password policy (min 10 chars, upper + lower + digit +
+      // symbol -- see docs/SECURITY.md) is enforced by Supabase Auth; show
+      // the rule in the user's language instead of Supabase's English text.
+      setError(result.error.code === 'weak_password' ? t('weakPassword') : result.error.message);
       setPending(false);
       return;
     }
@@ -105,12 +108,20 @@ export function LoginForm() {
           id="password"
           type="password"
           required
-          minLength={8}
+          // Only enforced client-side when choosing a password; at sign-in
+          // the server is the judge (older accounts may predate the policy).
+          minLength={mode === 'signUp' ? 10 : undefined}
+          aria-describedby={mode === 'signUp' ? 'password-rule' : undefined}
           autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           className="w-full rounded border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-900"
         />
+        {mode === 'signUp' ? (
+          <p id="password-rule" className="text-xs text-zinc-600 dark:text-zinc-400">
+            {t('passwordRule')}
+          </p>
+        ) : null}
       </div>
 
       {error ? (
