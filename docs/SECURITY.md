@@ -115,7 +115,7 @@ change — the test fails if the code and this table disagree.
 | Resource / action | Owner | Psychologist | Admin Staff |
 |---|---|---|---|
 | Patients — create, read, update | ✅ | ✅ | ✅ |
-| Patients — delete / archive | ✅ | ❌ | ❌ |
+| Patients — archive / restore (there is no delete — [ADR-0014](decisions/0014-patients-archived-not-deleted.md)) | ✅ | ❌ | ❌ |
 | Appointments — create, read, update, cancel | ✅ | ✅ | ✅ |
 | Clinical sessions — read (metadata: date, duration, patient, professional — no note content) | ✅ | ✅ | ✅ |
 | Clinical sessions — create, update | ✅ | ✅ | ❌ |
@@ -236,6 +236,7 @@ running code, not by review — see
 | `app_private.is_organization_creator(org_id)` | Same, for the bootstrap case |
 | `app_private.current_user_email()` | The caller's email, from the **verified** token's `email` claim (`app.current_user_email`), lower-cased. Identity, like `current_user_id()` — read only by the invitation policies ([ADR-0013](decisions/0013-organization-invitations.md)) |
 | `app_private.has_pending_invitation(org_id, role)` | Whether a pending, unexpired invitation exists for the caller's email to that organization with that role — `SECURITY DEFINER`, for the same recursion reason (the `memberships` INSERT policy reads `invitations`, whose policies read `memberships`) |
+| `app_private.has_active_role(org_id, roles[])` | Whether the caller holds an *active* membership in the organization with one of the given roles — `SECURITY DEFINER`, same reason as `is_active_member`. For role-aware policies (owner-only patient archive; Milestone 4 clinical notes). Re-derives the role from `memberships`; never reads a role from the application |
 
 `rls-helpers.sql` sets `check_function_bodies = off`, so it can — and must —
 run **before** the Prisma migrations on a fresh database: the migrations'
@@ -259,11 +260,14 @@ pending. **Deployment requirement:** Supabase "Confirm email" must be on,
 or the `email` claim isn't a verified address (the link token still
 prevents exploitation on its own).
 
-### Organization scoping — planned, not yet implemented
+### Organization scoping — tenant tables
 
-The pattern below is the design for `patients` and other tenant tables
-once they exist (Milestone 2+) — not yet applied to any real table. Note
-it carries **both** conditions:
+The pattern below is the template for every tenant table. **`patients`
+(Milestone 2) is the first table built on it** — its real policies are split
+per command (SELECT / INSERT / UPDATE, no DELETE) because inserts must also pin
+`created_by` to the caller and updates are role-aware for archived rows
+(ADR-0014); see the `20261115100000_patients` migration. Note it carries
+**both** conditions:
 
 ```sql
 ALTER TABLE patients ENABLE ROW LEVEL SECURITY;

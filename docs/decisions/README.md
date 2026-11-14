@@ -22,6 +22,7 @@ Status is one of `Proposed`, `Accepted`, `Superseded`, `Deprecated`.
 | [0011](0011-profiles-auth-fk-via-privileged-connection.md) | `profiles` → `auth.users` FK applied via the privileged admin connection, not Prisma | Accepted |
 | [0012](0012-rls-gates-on-verified-membership.md) | Tenant policies gate on verified membership, via private SECURITY DEFINER helpers | Accepted |
 | [0013](0013-organization-invitations.md) | Organization invitations: link token bound to the invitee's verified email | Accepted |
+| [0014](0014-patients-archived-not-deleted.md) | Patients are archived, never deleted; archiving is owner-only down to RLS | Accepted |
 
 When a decision here needs to change, add a new ADR that supersedes the old
 one and update its status — don't silently edit history.

@@ -81,12 +81,33 @@ while removing just an inviter's membership is still refused.
 **Grants:** `app_runtime` may `UPDATE` only `status`, `accepted_by`,
 `accepted_at`, `revoked_at`, and may not `DELETE` at all.
 
-### `patients`
-`id PK`, `organization_id FK NOT NULL`, `full_name`, `date_of_birth`,
-`email`, `phone`, emergency contact fields (optional),
-`assigned_professional_id` → composite FK to `memberships (user_id, organization_id)`,
-nullable, `status enum(active, inactive, archived)`,
-`consent_recorded_at`, `created_by`, `deleted_at`.
+### `patients` (implemented, Milestone 2)
+`id PK`, `organization_id FK NOT NULL` (cascade with the organization),
+`full_name` (required), `date_of_birth date`, `email`, `phone`,
+`emergency_contact_name`, `emergency_contact_phone` (all optional),
+`status enum(active, inactive, archived)` default `active`, `archived_at`,
+`created_by` → composite FK to `memberships (organization_id, user_id)`
+(`NO ACTION`, like invitations), `created_at`, `updated_at`.
+`UNIQUE (id, organization_id)` — the target of every future composite FK
+(appointments, sessions, payments).
+
+- **Archived, never deleted** ([ADR-0014](decisions/0014-patients-archived-not-deleted.md)):
+  `app_runtime` has no `DELETE` grant; `UPDATE` only on the detail columns,
+  `status`, `archived_at`, `updated_at`. Archiving/restoring is owner-only,
+  enforced by the `patients_update` policy via `app_private.has_active_role`.
+- **CHECKs:** trimmed non-empty `full_name` ≤ 200; `email` lower-cased ≤ 320;
+  phones trimmed ≤ 30; `date_of_birth >= 1900-01-01` ("not in the future" is
+  API-only: a CHECK cannot depend on the clock); `status = 'archived'` ⇔
+  `archived_at IS NOT NULL`.
+- **Indexes:** `(organization_id, full_name)` for the name-ordered list,
+  `(organization_id, created_by)` for the creator FK. Search is a
+  case-insensitive substring match (`ILIKE`) inside one organization — fine at
+  a practice's scale (hundreds of rows); revisit with `pg_trgm` if a clinic
+  ever has tens of thousands. Accent-insensitive search ("Jose" finding
+  "José") is not implemented yet.
+- **Planned columns dropped from the original sketch:** `assigned_professional_id`,
+  `consent_recorded_at`, `deleted_at` (replaced by `status`/`archived_at`) —
+  see ADR-0014 for why.
 
 > `national_id` was deliberately **not** included — no current MVP feature
 > (no formal tax invoicing, no insurance claims) justifies collecting it.
