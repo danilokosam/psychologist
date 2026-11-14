@@ -22,6 +22,8 @@ function fakeRepository(seed: { profile?: Profile; memberships?: Membership[] } 
       return state.profile;
     },
     listMemberships: async () => state.memberships,
+    updateLocale: async () => state.profile,
+    lockAccount: async () => {},
     insertOrganizationWithOwner: async ({ userId: _userId, name, slug }) => {
       state.inserts.organizations += 1;
       const membership: Membership = {
