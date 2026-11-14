@@ -218,13 +218,18 @@ up to date, which would otherwise be easy to forget.
   (types must match the Node version we run — bump with `.nvmrc`) and
   `typescript` majors (TS 7 needs a planned migration).
 
+**Policy on major versions.** Majors of core dependencies are **deferred
+to Milestone 6** (before real data) and listed, with reasons, in
+`docs/ROADMAP.md` → "Deferred dependency upgrades"; they are ignored in
+`dependabot.yml` until then. Exception: an upgrade the `audit` job forces for
+security is done immediately.
+
 **How to handle its PRs.**
 
 | Situation | What to do |
 |---|---|
 | Minor/patch group, CI green | Merge. Read the release notes if a package matters (Next, Prisma, Supabase). |
-| Major update, CI green | Read the changelog for behaviour changes CI wouldn't catch, then merge. |
-| Major update, CI red | It needs a real migration: close the PR with the reason, add an `ignore` rule with a comment, and track the migration in `docs/ROADMAP.md`. |
+| Major update (green or red) | Per the policy above: close with the reason, add an `ignore` rule with a comment, and add a row to the deferred-upgrades table in `docs/ROADMAP.md` — unless the `audit` job requires it now. |
 | Merge conflict (usually `pnpm-lock.yaml`, after another PR merged) | Comment `@dependabot rebase` — it regenerates the lockfile with pnpm. Don't resolve lockfile conflicts by hand. |
 | "Branch out of date" (`main` moved, no conflict) | Same `@dependabot rebase`, or `gh api -X PUT repos/<owner>/<repo>/pulls/<n>/update-branch`. Then wait for CI again. |
 | Not wanted (e.g. types newer than our runtime) | Close with the reason and add an `ignore` rule, so it isn't proposed again. |

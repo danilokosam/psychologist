@@ -16,14 +16,35 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    # POLICY (decided 2026-11-14): major upgrades of core dependencies are
+    # deferred and evaluated together in Milestone 6 (hardening), before any
+    # real patient data -- see "Deferred dependency upgrades" in
+    # docs/ROADMAP.md. Minor and patch updates keep flowing. EXCEPTION: if the
+    # CI `audit` job fails because a fix exists only in a new major, upgrade
+    # immediately, whatever the milestone.
     ignore:
       # Types must describe the Node we actually run (.nvmrc = 22). Bump this
       # together with .nvmrc, never on its own (closed PR #5).
       - dependency-name: '@types/node'
         update-types: ['version-update:semver-major']
-      # TypeScript 7 fails typecheck + integration here (closed PR #3): it
-      # needs a planned migration, not a dependency bump. See docs/ROADMAP.md.
+      # TypeScript 7 fails typecheck + integration (closed PR #3).
       - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      # Prisma 7 fails CI (closed PRs #9, #11); CLI and client must move
+      # together as one migration, which Dependabot can't do in one PR.
+      - dependency-name: prisma
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@prisma/client'
+        update-types: ['version-update:semver-major']
+      # Express 5 passed CI (closed PR #12) but is the API framework itself:
+      # behaviour changes tests may not cover. Deferred to Milestone 6.
+      - dependency-name: express
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/express'
+        update-types: ['version-update:semver-major']
+      # vitest 5 passed CI (closed PR #10); dev-only, deferred for a single
+      # consistent rule rather than for risk.
+      - dependency-name: vitest
         update-types: ['version-update:semver-major']
     groups:
       # Minor/patch updates batched into one PR; majors stay separate so each
