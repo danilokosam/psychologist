@@ -236,6 +236,13 @@ a check to get something merged; fix the cause. Run locally before pushing:
 drift). `schema.prisma` must always match the migrations — CI fails
 otherwise. Details: README "CI/CD".
 
+**Dependabot PRs** (weekly, `dependabot[bot]`): handle them per the table in
+README "Dependabot" — merge green minor/patch groups; read changelogs for
+majors; for lockfile conflicts comment `@dependabot rebase` (never resolve
+`pnpm-lock.yaml` by hand); close unwanted/breaking ones *with the reason*
+and add an `ignore` rule in `.github/dependabot.yml` with a comment. Merge
+them one at a time — each must be up to date with `main` and green.
+
 ## Documentation requirements
 
 - `/docs` is maintained **during** development, not written retroactively.
