@@ -44,3 +44,25 @@ export type {
   InvitationStatus,
   ListInvitationsResponse,
 } from './invitations';
+
+export {
+  PATIENTS_MAX_PAGE_SIZE,
+  createPatientRequestSchema,
+  editablePatientStatusSchema,
+  listPatientsQuerySchema,
+  listPatientsResponseSchema,
+  patientResponseSchema,
+  patientSchema,
+  patientStatusSchema,
+  updatePatientRequestSchema,
+} from './patients';
+export type {
+  CreatePatientRequest,
+  EditablePatientStatus,
+  ListPatientsQuery,
+  ListPatientsResponse,
+  Patient,
+  PatientResponse,
+  PatientStatus,
+  UpdatePatientRequest,
+} from './patients';

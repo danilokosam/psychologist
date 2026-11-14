@@ -9,7 +9,12 @@
 // It is NOT part of `pnpm test` because it needs real credentials and a live
 // database -- run it manually:
 //
-//   node --env-file=.env scripts/verify-rls-isolation.mjs <userA> <userB> <orgOfA>
+//   node --env-file=../../apps/api/.env scripts/verify-rls-isolation.mjs <userA> <userB> <orgOfA>
+//
+// It MUST run as app_runtime -- i.e. with the API's DATABASE_URL, not this
+// package's .env (that one is app_migrator, the table owner, which still
+// meets forced RLS but holds grants app_runtime lacks, e.g. DELETE on
+// patients -- the "no DELETE" check fails under it, as it should).
 //
 // Exits non-zero if isolation is violated.
 
@@ -94,6 +99,35 @@ try {
     insertRejected = true;
   }
   check('stranger cannot grant themselves membership in another organization', insertRejected);
+
+  // Patients (Milestone 2). The owner's own view is the control: if it is
+  // empty the stranger's zero below proves nothing, so it is reported.
+  const ownerPatients = await asUserInOrg(userA, orgOfA, (tx) => tx.patient.count());
+  check('owner can read their own organization patients', true, `${ownerPatients} rows visible to the owner`);
+
+  const strangerPatients = await asUserInOrg(userB, orgOfA, (tx) =>
+    tx.patient.count({ where: { organizationId: orgOfA } }),
+  );
+  check('stranger claiming the organization reads none of its patients', strangerPatients === 0, `${strangerPatients} rows`);
+
+  let patientInsertRejected = false;
+  try {
+    await asUserInOrg(userB, orgOfA, (tx) =>
+      tx.patient.create({ data: { organizationId: orgOfA, createdBy: userB, fullName: 'Planted (rejected)' }, select: { id: true } }),
+    );
+  } catch {
+    patientInsertRejected = true;
+  }
+  check('stranger cannot plant a patient in another organization', patientInsertRejected);
+
+  // ADR-0014: no DELETE grant, so even the owner's own transaction fails.
+  let deleteDenied = false;
+  try {
+    await asUserInOrg(userA, orgOfA, (tx) => tx.patient.deleteMany({ where: { id: '00000000-0000-4000-8000-000000000000' } }));
+  } catch (error) {
+    deleteDenied = /permission denied/.test(String(error));
+  }
+  check('nobody can delete patients (no DELETE grant)', deleteDenied);
 } finally {
   await prisma.$disconnect();
 }

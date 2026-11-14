@@ -196,3 +196,36 @@ REVOKE ALL ON FUNCTION app_private.current_user_email() FROM PUBLIC;
 REVOKE ALL ON FUNCTION app_private.has_pending_invitation(uuid, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION app_private.current_user_email() TO app_runtime, app_migrator;
 GRANT EXECUTE ON FUNCTION app_private.has_pending_invitation(uuid, text) TO app_runtime, app_migrator;
+
+
+-- ---------------------------------------------------------------------------
+-- has_active_role (Milestone 2, patients; reused by later role-aware tables)
+--
+-- True when the caller holds an ACTIVE membership in org_id with one of the
+-- given roles. Policies that depend on the role (only an owner archives a
+-- patient; later, admin_staff never reads clinical notes) call this instead
+-- of trusting a role from the application: the role is re-derived from
+-- `memberships` on every check (ADR-0003). SECURITY DEFINER for the same
+-- reason as is_active_member: reading memberships from a policy on a table
+-- that memberships' own policies might one day reference must not recurse
+-- (ADR-0012). Returns only a boolean -- no privileged write happens here.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION app_private.has_active_role(org_id uuid, roles text[])
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.memberships m
+    WHERE m.organization_id = org_id
+      AND m.user_id = nullif(current_setting('app.current_user_id', true), '')::uuid
+      AND m.status = 'active'
+      AND m.role::text = ANY (roles)
+  );
+$$;
+
+REVOKE ALL ON FUNCTION app_private.has_active_role(uuid, text[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION app_private.has_active_role(uuid, text[]) TO app_runtime, app_migrator;
