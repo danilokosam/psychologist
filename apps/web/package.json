@@ -13,11 +13,11 @@
   "dependencies": {
     "@psych/types": "workspace:*",
     "next": "16.4.6",
-    "next-intl": "^4.15.0",
+    "next-intl": "^4.15.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.119.0"
+    "@supabase/supabase-js": "^2.119.1"
   },
   "devDependencies": {
     "@tailwindcss/turbopack": "^4",
